@@ -1,0 +1,19 @@
+JUKE Mp3 Player - avisos de componentes de terceiros
+
+LAME 3.100
+Copyright (c) The LAME Project contributors.
+Licença: GNU Lesser General Public License, version 2.1 or later.
+Código-fonte e informações: https://lame.sourceforge.io/
+
+liblame 3.100 Android package
+Copyright (c) Alexey Kuznetsov and contributors.
+Licença declarada pelos artefatos: GNU Lesser General Public License (LGPL).
+Código-fonte: https://gitlab.com/axet/android-lame
+Artefatos utilizados sem modificação local. Os componentes nativos permanecem
+separados dentro do APK, por ABI. Consulte os endereços acima para obter o
+código-fonte correspondente e os termos completos das licenças.
+
+Java Native Access (JNA) 5.19.1
+Copyright (c) JNA contributors.
+Licença: Apache License 2.0 ou LGPL 2.1+ (distribuição sob Apache 2.0).
+Código-fonte: https://github.com/java-native-access/jna
