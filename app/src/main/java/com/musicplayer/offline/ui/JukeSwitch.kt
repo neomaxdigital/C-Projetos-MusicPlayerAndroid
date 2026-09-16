@@ -3,17 +3,20 @@ package com.musicplayer.offline.ui
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 
 @Composable
 fun JukeSwitch(
     checked: Boolean,
     onCheckedChange: ((Boolean) -> Unit)?,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
+        modifier = modifier,
         colors = SwitchDefaults.colors(
             checkedThumbColor = JukeTextPrimary,
             checkedTrackColor = JukePrimary,
