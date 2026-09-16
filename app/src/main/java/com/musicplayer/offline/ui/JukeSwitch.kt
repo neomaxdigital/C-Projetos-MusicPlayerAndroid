@@ -12,6 +12,7 @@ fun JukeSwitch(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val accent = PrimaryBlue
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -19,14 +20,14 @@ fun JukeSwitch(
         modifier = modifier,
         colors = SwitchDefaults.colors(
             checkedThumbColor = JukeTextPrimary,
-            checkedTrackColor = JukePrimary,
-            checkedBorderColor = JukePrimary,
+            checkedTrackColor = accent,
+            checkedBorderColor = accent,
             uncheckedThumbColor = JukeInactiveThumb,
             uncheckedTrackColor = JukeInactiveTrack,
             uncheckedBorderColor = JukeInactiveBorder,
             disabledCheckedThumbColor = JukeTextPrimary.copy(alpha = 0.72f),
-            disabledCheckedTrackColor = JukePrimary.copy(alpha = 0.46f),
-            disabledCheckedBorderColor = JukePrimary.copy(alpha = 0.46f),
+            disabledCheckedTrackColor = accent.copy(alpha = 0.46f),
+            disabledCheckedBorderColor = accent.copy(alpha = 0.46f),
             disabledUncheckedThumbColor = JukeInactiveThumb.copy(alpha = 0.52f),
             disabledUncheckedTrackColor = JukeInactiveTrack.copy(alpha = 0.52f),
             disabledUncheckedBorderColor = JukeInactiveBorder.copy(alpha = 0.52f)

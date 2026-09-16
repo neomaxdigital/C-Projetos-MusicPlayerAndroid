@@ -3,12 +3,12 @@ package com.musicplayer.offline.data
 import android.content.Context
 
 enum class ThemeMode { SYSTEM, DARK, LIGHT }
-enum class AccentColor { BLUE }
+enum class AccentColor { CYAN, ELECTRIC_BLUE }
 enum class ArtworkSize { SMALL, MEDIUM, LARGE }
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.DARK,
-    val accentColor: AccentColor = AccentColor.BLUE,
+    val accentColor: AccentColor = AccentColor.CYAN,
     val resumeLastTrack: Boolean = true,
     val resumePosition: Boolean = true,
     val autoResume: Boolean = false,
@@ -45,7 +45,11 @@ object AppSettingsCodec {
         }.getOrDefault(AppSettings())
     }
 
-    private fun decodeAccent(raw: String): AccentColor = AccentColor.BLUE
+    private fun decodeAccent(raw: String): AccentColor = when (raw) {
+        "BLUE", "CYAN" -> AccentColor.CYAN
+        "ELECTRIC_BLUE" -> AccentColor.ELECTRIC_BLUE
+        else -> AccentColor.CYAN
+    }
 }
 
 class AppSettingsRepository(context: Context) {

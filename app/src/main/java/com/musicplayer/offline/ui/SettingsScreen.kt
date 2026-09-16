@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +53,7 @@ fun SettingsScreen(settings: AppSettings, update: ((AppSettings) -> AppSettings)
             ChoiceRow(ThemeMode.entries, settings.themeMode, { themeLabel(it) }) { update { s -> s.copy(themeMode = it) } }
             Spacer(Modifier.height(12.dp))
             Text("Cor de destaque", fontWeight = FontWeight.SemiBold)
-            ChoiceRow(AccentColor.entries, settings.accentColor, { accentLabel(it) }) { update { s -> s.copy(accentColor = it) } }
+            AccentColorChoiceRow(settings.accentColor) { update { s -> s.copy(accentColor = it) } }
         }
         SectionLabel("REPRODUÇÃO")
         SettingsCard {
@@ -124,8 +125,36 @@ private fun <T> ChoiceRow(values: List<T>, selected: T, label: (T) -> String, ch
     }
 }
 
+@Composable
+private fun AccentColorChoiceRow(selected: AccentColor, change: (AccentColor) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        AccentColor.entries.forEach { accent ->
+            val isSelected = accent == selected
+            val accentColor = accent.themeColor()
+            FilterChip(
+                selected = isSelected,
+                onClick = { change(accent) },
+                label = { Text(accentLabel(accent), color = if (isSelected) Color.White else JukeTextPrimary) },
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                    containerColor = SurfaceRaised.copy(alpha = 0.68f),
+                    labelColor = JukeTextPrimary,
+                    selectedContainerColor = accentColor,
+                    selectedLabelColor = Color.White
+                ),
+                border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected,
+                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                    selectedBorderColor = accentColor
+                )
+            )
+        }
+    }
+}
+
 private fun accentLabel(value: AccentColor) = when (value) {
-    AccentColor.BLUE -> "JUKE · #00C2FB"
+    AccentColor.CYAN -> "Ciano JUKE"
+    AccentColor.ELECTRIC_BLUE -> "Azul Elétrico"
 }
 private fun artworkLabel(value: ArtworkSize) = when (value) { ArtworkSize.SMALL -> "Pequena"; ArtworkSize.MEDIUM -> "Média"; ArtworkSize.LARGE -> "Grande" }
 private fun themeLabel(value: ThemeMode) = when (value) { ThemeMode.SYSTEM -> "Sistema"; ThemeMode.DARK -> "Escuro"; ThemeMode.LIGHT -> "Claro" }

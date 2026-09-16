@@ -6,7 +6,7 @@ import org.junit.Test
 class AppSettingsCodecTest {
     @Test fun settingsRoundTripPreservesEveryOption() {
         val expected = AppSettings(
-            themeMode = ThemeMode.LIGHT, accentColor = AccentColor.BLUE,
+            themeMode = ThemeMode.LIGHT, accentColor = AccentColor.ELECTRIC_BLUE,
             resumeLastTrack = false, resumePosition = false, autoResume = true,
             restoreShuffle = false, restoreRepeat = false, showShortSongs = false,
             minimumDurationSeconds = 42, showUnknownFiles = false, showMiniPlayer = false,
@@ -19,10 +19,15 @@ class AppSettingsCodecTest {
         assertEquals(AppSettings(), AppSettingsCodec.decode("invalid"))
     }
 
-    @Test fun legacyAccentChoicesMigrateToOfficialJukeBlue() {
-        val base = AppSettingsCodec.encode(AppSettings(accentColor = AccentColor.BLUE))
-        assertEquals(AccentColor.BLUE, AppSettingsCodec.decode(base.replace("|BLUE|", "|GREEN|")).accentColor)
-        assertEquals(AccentColor.BLUE, AppSettingsCodec.decode(base.replace("|BLUE|", "|PURPLE|")).accentColor)
-        assertEquals(AccentColor.BLUE, AppSettingsCodec.decode(base.replace("|BLUE|", "|CYAN|")).accentColor)
+    @Test fun legacyBlueAccentMigratesToCyan() {
+        val base = AppSettingsCodec.encode(AppSettings(accentColor = AccentColor.CYAN))
+        assertEquals(AccentColor.CYAN, AppSettingsCodec.decode(base.replace("|CYAN|", "|BLUE|")).accentColor)
+    }
+
+    @Test fun supportedAndInvalidAccentValuesDecodeSafely() {
+        val base = AppSettingsCodec.encode(AppSettings(accentColor = AccentColor.CYAN))
+        assertEquals(AccentColor.CYAN, AppSettingsCodec.decode(base).accentColor)
+        assertEquals(AccentColor.ELECTRIC_BLUE, AppSettingsCodec.decode(base.replace("|CYAN|", "|ELECTRIC_BLUE|")).accentColor)
+        assertEquals(AccentColor.CYAN, AppSettingsCodec.decode(base.replace("|CYAN|", "|INVALID|")).accentColor)
     }
 }
