@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -95,10 +97,16 @@ fun LibraryRootScreen(
     onEqualizer: () -> Unit,
     onSleepTimer: () -> Unit,
     onSettings: () -> Unit,
+    onAddFolder: () -> Unit,
+    onAddSong: () -> Unit,
+    onRefreshLibrary: () -> Unit,
     playlistContent: @Composable () -> Unit
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        LibraryTopBar(tab.title, onSearch, onFolders, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings)
+        LibraryTopBar(
+            tab.title, onSearch, onFolders, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings,
+            onAddFolder, onAddSong, onRefreshLibrary
+        )
         TabRow(
             selectedTabIndex = tab.ordinal,
             containerColor = AppBackground,
@@ -426,9 +434,13 @@ private fun LibraryTopBar(
     onQueue: (() -> Unit)? = null,
     onEqualizer: (() -> Unit)? = null,
     onSleepTimer: (() -> Unit)? = null,
-    onSettings: (() -> Unit)? = null
+    onSettings: (() -> Unit)? = null,
+    onAddFolder: (() -> Unit)? = null,
+    onAddSong: (() -> Unit)? = null,
+    onRefreshLibrary: (() -> Unit)? = null
 ) {
     var moreOpen by remember { mutableStateOf(false) }
+    var addMusicOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         JukeHorizontalLogo(Modifier.width(88.dp).height(30.dp))
         Spacer(Modifier.width(10.dp))
@@ -436,13 +448,37 @@ private fun LibraryTopBar(
         IconButton(onSearch) { Icon(Icons.Default.Search, "Pesquisar") }
         if (onFolders != null && onGenres != null && onQueue != null) Box {
             IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, "Mais opções da biblioteca") }
-            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false; addMusicOpen = false }) {
+                if (onAddFolder != null && onAddSong != null && onRefreshLibrary != null) {
+                    DropdownMenuItem(
+                        text = { Text("Adicionar músicas") },
+                        leadingIcon = { Icon(Icons.Default.Add, null) },
+                        onClick = { moreOpen = false; addMusicOpen = true }
+                    )
+                }
                 DropdownMenuItem(text = { Text("Pastas") }, leadingIcon = { Icon(Icons.Default.Folder, null) }, onClick = { moreOpen = false; onFolders() })
                 DropdownMenuItem(text = { Text("Gêneros") }, leadingIcon = { Icon(Icons.Default.Category, null) }, onClick = { moreOpen = false; onGenres() })
                 DropdownMenuItem(text = { Text("Fila de reprodução") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) }, onClick = { moreOpen = false; onQueue() })
                 if (onEqualizer != null) DropdownMenuItem(text = { Text("Equalizador") }, leadingIcon = { Icon(Icons.Default.GraphicEq, null) }, onClick = { moreOpen = false; onEqualizer() })
                 if (onSleepTimer != null) DropdownMenuItem(text = { Text("Timer para dormir") }, leadingIcon = { Icon(Icons.Default.Bedtime, null) }, onClick = { moreOpen = false; onSleepTimer() })
                 if (onSettings != null) DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { moreOpen = false; onSettings() })
+            }
+            DropdownMenu(expanded = addMusicOpen, onDismissRequest = { addMusicOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text("Procurar pasta") },
+                    leadingIcon = { Icon(Icons.Default.Folder, null) },
+                    onClick = { addMusicOpen = false; onAddFolder?.invoke() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Procurar música") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    onClick = { addMusicOpen = false; onAddSong?.invoke() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Atualizar biblioteca") },
+                    leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                    onClick = { addMusicOpen = false; onRefreshLibrary?.invoke() }
+                )
             }
         }
     }

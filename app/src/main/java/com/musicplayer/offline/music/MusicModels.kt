@@ -17,7 +17,8 @@ data class Song(
     val relativePath: String = "",
     val genre: String = UNKNOWN_GENRE,
     val displayName: String = "",
-    val mimeType: String = ""
+    val mimeType: String = "",
+    val fileSize: Long = 0L
 )
 
 data class ArtistGroup(

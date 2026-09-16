@@ -64,6 +64,8 @@ import com.musicplayer.offline.data.PlaybackSnapshot
 import com.musicplayer.offline.conversion.AudioConversionManager
 import com.musicplayer.offline.music.MusicRepository
 import com.musicplayer.offline.music.AudioFileSupport
+import com.musicplayer.offline.music.LibrarySongMerge
+import com.musicplayer.offline.music.SafMusicRepository
 import com.musicplayer.offline.music.Song
 import com.musicplayer.offline.music.SongSort
 import com.musicplayer.offline.music.asAlbums
@@ -155,14 +157,32 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     var conversionRequest by remember { mutableStateOf<ConversionRequest?>(null) }
     val conversionState by AudioConversionManager.state.collectAsStateWithLifecycle()
     val sessionRepository = remember { PlaybackSessionRepository(context) }
+    val safMusicRepository = remember(context) { SafMusicRepository(context) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
+    val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let {
+            safMusicRepository.addFolder(it)
+            playbackMessage = "Pasta adicionada à biblioteca"
+            rescanRevision++
+        }
+    }
+    val songLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            safMusicRepository.addSong(it)
+            playbackMessage = "Música adicionada à biblioteca"
+            rescanRevision++
+        }
+    }
 
     LaunchedEffect(granted, rescanRevision, state.settings.showUnknownFiles, state.settings.showShortSongs, state.settings.minimumDurationSeconds) {
         if (granted) {
             viewModel.beginLibraryLoad()
             runCatching {
                 withContext(Dispatchers.IO) {
-                    MusicRepository(context).loadSongs(state.settings.showUnknownFiles).filter {
+                    LibrarySongMerge.merge(
+                        MusicRepository(context).loadSongs(state.settings.showUnknownFiles),
+                        safMusicRepository.loadSongs()
+                    ).filter {
                         state.settings.showShortSongs || it.duration >= state.settings.minimumDurationSeconds * 1_000L
                     }
                 }
@@ -343,6 +363,12 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                         playSong(player, queue, song)
                     },
                     onConvertSong = { song, shareAfter -> conversionRequest = ConversionRequest(song, shareAfter) },
+                    onAddFolder = { folderLauncher.launch(null) },
+                    onAddSong = { songLauncher.launch(arrayOf("audio/*")) },
+                    onRefreshLibrary = {
+                        playbackMessage = "Biblioteca atualizada"
+                        rescanRevision++
+                    },
                     openNowPlaying = { if (currentSongId != null) nowPlaying = true }
                 )
               }
@@ -395,6 +421,9 @@ private fun HomeShell(
     onMovePlaylistSong: (String, Int, Int) -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
     onConvertSong: (Song, Boolean) -> Unit,
+    onAddFolder: () -> Unit,
+    onAddSong: () -> Unit,
+    onRefreshLibrary: () -> Unit,
     openNowPlaying: () -> Unit
 ) {
     val albums = remember(state.songs) { state.songs.asAlbums() }
@@ -518,6 +547,9 @@ private fun HomeShell(
                         onEqualizer = { openFeature(FeatureRoute.EQUALIZER) },
                         onSleepTimer = { openFeature(FeatureRoute.SLEEP_TIMER) },
                         onSettings = { openFeature(FeatureRoute.SETTINGS) },
+                        onAddFolder = onAddFolder,
+                        onAddSong = onAddSong,
+                        onRefreshLibrary = onRefreshLibrary,
                         playlistContent = {
                             PlaylistsScreen(
                                 state.playlists,

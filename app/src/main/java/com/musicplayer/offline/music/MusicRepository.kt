@@ -21,7 +21,8 @@ class MusicRepository(private val context: Context) {
             MediaStore.Audio.Media.TRACK,
             MediaStore.Audio.Media.RELATIVE_PATH,
             MediaStore.Audio.Media.DISPLAY_NAME,
-            MediaStore.Audio.Media.MIME_TYPE
+            MediaStore.Audio.Media.MIME_TYPE,
+            MediaStore.Audio.Media.SIZE
         )
         return buildList {
             val mimePlaceholders = AudioFileSupport.recognizedMimeTypes.joinToString(",") { "?" }
@@ -50,6 +51,7 @@ class MusicRepository(private val context: Context) {
                 val relativePathIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.RELATIVE_PATH)
                 val displayNameIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
                 val mimeTypeIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+                val sizeIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idIndex)
                     val uri = Uri.withAppendedPath(collection, id.toString())
@@ -69,7 +71,8 @@ class MusicRepository(private val context: Context) {
                             relativePath = cursor.getString(relativePathIndex).orEmpty(),
                             genre = genresBySongId[id] ?: UNKNOWN_GENRE,
                             displayName = displayName,
-                            mimeType = AudioFileSupport.mimeType(cursor.getString(mimeTypeIndex), displayName)
+                            mimeType = AudioFileSupport.mimeType(cursor.getString(mimeTypeIndex), displayName),
+                            fileSize = cursor.getLong(sizeIndex)
                         )
                     )
                 }

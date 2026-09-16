@@ -26,6 +26,13 @@ object AudioFileSupport {
             else -> ""
         }
 
+    fun isSupported(mimeType: String?, displayName: String, uri: String = ""): Boolean {
+        val normalizedMime = mimeType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+        val extension = displayName.substringAfterLast('.', "").lowercase()
+        val uriExtension = uri.substringBefore('?').substringAfterLast('.', "").lowercase()
+        return normalizedMime in recognizedMimeTypes || extension in setOf("mp3", "wav") || uriExtension in setOf("mp3", "wav")
+    }
+
     fun isWav(mimeType: String?, displayName: String, uri: String = ""): Boolean {
         val normalizedMime = mimeType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
         val extension = displayName.substringAfterLast('.', "").lowercase()
