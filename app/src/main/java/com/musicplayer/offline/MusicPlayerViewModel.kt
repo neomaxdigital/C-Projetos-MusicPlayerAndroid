@@ -9,6 +9,7 @@ import com.musicplayer.offline.data.PlaylistRepository
 import com.musicplayer.offline.data.AppSettings
 import com.musicplayer.offline.data.AppSettingsRepository
 import com.musicplayer.offline.music.LocalPlaylist
+import com.musicplayer.offline.music.LibrarySongMerge
 import com.musicplayer.offline.music.Song
 import com.musicplayer.offline.music.SongSort
 import com.musicplayer.offline.music.sortedByOption
@@ -54,6 +55,14 @@ class MusicPlayerViewModel(
             isLoading = false,
             loadError = null
         )
+    }
+
+    /** Adds a selected SAF document to the visible library before the background refresh ends. */
+    fun addSongImmediately(song: Song): Boolean {
+        val merged = LibrarySongMerge.merge(state.songs, listOf(song))
+        if (merged.size == state.songs.size) return false
+        setSongs(merged)
+        return true
     }
 
     fun beginLibraryLoad() { state = state.copy(isLoading = true, loadError = null) }

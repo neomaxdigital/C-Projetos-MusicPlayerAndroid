@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -66,6 +67,7 @@ import com.musicplayer.offline.music.MusicRepository
 import com.musicplayer.offline.music.AudioFileSupport
 import com.musicplayer.offline.music.LibrarySongMerge
 import com.musicplayer.offline.music.SafMusicRepository
+import com.musicplayer.offline.music.SafSongImportResult
 import com.musicplayer.offline.music.Song
 import com.musicplayer.offline.music.SongSort
 import com.musicplayer.offline.music.asAlbums
@@ -114,6 +116,7 @@ import com.musicplayer.offline.ui.toMediaItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MusicPlayerViewModel> {
@@ -158,6 +161,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     val conversionState by AudioConversionManager.state.collectAsStateWithLifecycle()
     val sessionRepository = remember { PlaybackSessionRepository(context) }
     val safMusicRepository = remember(context) { SafMusicRepository(context) }
+    val importScope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let {
@@ -168,9 +172,21 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     }
     val songLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
-            safMusicRepository.addSong(it)
-            playbackMessage = "Música adicionada à biblioteca"
-            rescanRevision++
+            importScope.launch {
+                when (val result = withContext(Dispatchers.IO) { safMusicRepository.addSong(it) }) {
+                    is SafSongImportResult.Imported -> {
+                        val addedToUi = viewModel.addSongImmediately(result.song)
+                        playbackMessage = when {
+                            addedToUi -> "Música adicionada à biblioteca"
+                            result.newlyPersisted -> "A música já está na biblioteca"
+                            else -> "Esta música já foi adicionada à biblioteca"
+                        }
+                        rescanRevision++
+                    }
+                    SafSongImportResult.Unsupported -> playbackMessage = "O arquivo selecionado não é um áudio compatível."
+                    SafSongImportResult.Failed -> playbackMessage = "Não foi possível adicionar a música selecionada."
+                }
+            }
         }
     }
 

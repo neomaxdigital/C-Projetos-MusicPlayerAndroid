@@ -21,7 +21,14 @@ class SafMusicRepository(context: Context) {
 
     fun addFolder(uri: Uri) = rememberUri(FOLDER_URIS_KEY, uri)
 
-    fun addSong(uri: Uri) = rememberUri(SONG_URIS_KEY, uri)
+    /**
+     * Reads the selected document before persisting it so the caller can put a valid Song on
+     * screen immediately. The saved URI is rebuilt on every subsequent library refresh.
+     */
+    fun addSong(uri: Uri): SafSongImportResult = runCatching {
+        val song = songFromUri(uri, INDIVIDUAL_SONGS_PATH) ?: return SafSongImportResult.Unsupported
+        SafSongImportResult.Imported(song, rememberUri(SONG_URIS_KEY, uri))
+    }.getOrDefault(SafSongImportResult.Failed)
 
     fun loadSongs(): List<Song> = buildList {
         folderUris().forEach { treeUri ->
@@ -32,11 +39,12 @@ class SafMusicRepository(context: Context) {
         }
     }
 
-    private fun rememberUri(key: String, uri: Uri) {
+    private fun rememberUri(key: String, uri: Uri): Boolean {
         takeReadPermissionIfAvailable(uri)
         val saved = preferences.getStringSet(key, emptySet()).orEmpty().toMutableSet()
-        saved += uri.toString()
+        if (!saved.add(uri.toString())) return false
         preferences.edit().putStringSet(key, saved).apply()
+        return true
     }
 
     private fun takeReadPermissionIfAvailable(uri: Uri) {
@@ -169,6 +177,12 @@ class SafMusicRepository(context: Context) {
             DocumentsContract.Document.COLUMN_LAST_MODIFIED
         )
     }
+}
+
+sealed interface SafSongImportResult {
+    data class Imported(val song: Song, val newlyPersisted: Boolean) : SafSongImportResult
+    data object Unsupported : SafSongImportResult
+    data object Failed : SafSongImportResult
 }
 
 object SafSongIds {
