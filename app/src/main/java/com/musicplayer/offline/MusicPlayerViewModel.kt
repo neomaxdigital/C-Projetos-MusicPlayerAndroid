@@ -18,6 +18,7 @@ data class LibraryUiState(
     val songs: List<Song> = emptyList(),
     val favoriteIds: Set<Long> = emptySet(),
     val recentIds: List<Long> = emptyList(),
+    val playCounts: Map<Long, Int> = emptyMap(),
     val playlists: List<LocalPlaylist> = emptyList(),
     val sort: SongSort = SongSort.TITLE,
     val settings: AppSettings = AppSettings(),
@@ -27,6 +28,9 @@ data class LibraryUiState(
     val sortedSongs: List<Song> get() = songs.sortedByOption(sort)
     val favoriteSongs: List<Song> get() = favoriteIds.mapNotNull { id -> songs.find { it.id == id } }
     val recentSongs: List<Song> get() = recentIds.mapNotNull { id -> songs.find { it.id == id } }
+    val mostPlayedSongs: List<Song> get() = songs
+        .filter { (playCounts[it.id] ?: 0) > 0 }
+        .sortedWith(compareByDescending<Song> { playCounts[it.id] ?: 0 }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
 }
 
 class MusicPlayerViewModel(
@@ -38,6 +42,7 @@ class MusicPlayerViewModel(
         LibraryUiState(
             favoriteIds = userLibrary.favoriteIds(),
             recentIds = userLibrary.recentIds(),
+            playCounts = userLibrary.playCounts(),
             playlists = playlistRepository.playlists(),
             settings = settingsRepository.load()
         )
@@ -46,11 +51,12 @@ class MusicPlayerViewModel(
 
     fun setSongs(songs: List<Song>) {
         val validIds = songs.mapTo(hashSetOf()) { it.id }
-        val (favorites, recents) = userLibrary.retainOnly(validIds)
+        val (favorites, recents, playCounts) = userLibrary.retainOnly(validIds)
         state = state.copy(
             songs = songs,
             favoriteIds = favorites,
             recentIds = recents,
+            playCounts = playCounts,
             playlists = playlistRepository.retainOnly(validIds),
             isLoading = false,
             loadError = null
@@ -85,6 +91,10 @@ class MusicPlayerViewModel(
 
     fun recordRecent(songId: Long) {
         state = state.copy(recentIds = userLibrary.recordRecent(songId))
+    }
+
+    fun recordPlay(songId: Long) {
+        state = state.copy(playCounts = userLibrary.recordPlay(songId))
     }
 
     fun createPlaylist(name: String) {

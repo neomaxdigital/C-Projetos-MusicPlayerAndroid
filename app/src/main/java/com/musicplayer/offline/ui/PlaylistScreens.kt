@@ -29,13 +29,15 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -76,39 +78,74 @@ import kotlinx.coroutines.launch
 fun PlaylistsScreen(
     playlists: List<LocalPlaylist>,
     songs: List<Song>,
+    favoriteIds: Set<Long>,
+    recentIds: List<Long>,
+    playCounts: Map<Long, Int>,
     onCreate: (String) -> Unit,
     onOpen: (String) -> Unit,
+    onOpenSmart: (SmartPlaylist) -> Unit,
     onRename: (String, String) -> Unit,
     onDelete: (String) -> Unit
 ) {
     val songsById = remember(songs) { songs.associateBy { it.id } }
+    val smartPlaylists = remember(songs, favoriteIds, recentIds, playCounts) {
+        listOf(
+            SmartPlaylist.FAVORITES to favoriteIds.mapNotNull(songsById::get),
+            SmartPlaylist.LAST_ADDED to songs.sortedByDescending(Song::dateAdded),
+            SmartPlaylist.RECENT_PLAYS to recentIds.mapNotNull(songsById::get),
+            SmartPlaylist.MOST_PLAYED to songs
+                .filter { (playCounts[it.id] ?: 0) > 0 }
+                .sortedWith(compareByDescending<Song> { playCounts[it.id] ?: 0 }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+        )
+    }
     var creating by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<LocalPlaylist?>(null) }
     var deleting by remember { mutableStateOf<LocalPlaylist?>(null) }
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Suas playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Button({ creating = true }, shape = RoundedCornerShape(14.dp)) {
-                Icon(Icons.Default.Add, null)
-                Spacer(Modifier.width(6.dp))
-                Text("Nova")
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        item(key = "smart_playlists_title") {
+            Text(
+                "Playlists inteligentes",
+                modifier = Modifier.padding(start = 2.dp, top = 12.dp, bottom = 3.dp),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        items(smartPlaylists, key = { "smart:${it.first.name}" }) { (playlist, playlistSongs) ->
+            SmartPlaylistCard(playlist, playlistSongs.size) { onOpenSmart(playlist) }
+        }
+        item(key = "user_playlists_title") {
+            Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Suas playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Button({ creating = true }, shape = RoundedCornerShape(14.dp)) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Nova")
+                }
             }
         }
         if (playlists.isEmpty()) {
-            EmptyLibraryPage("Playlists", "Crie uma playlist para organizar suas músicas.", Icons.AutoMirrored.Filled.PlaylistPlay)
+            item(key = "empty_user_playlists") {
+                Text(
+                    "Crie uma playlist para organizar suas músicas.",
+                    modifier = Modifier.padding(12.dp),
+                    color = TextMuted
+                )
+            }
         } else {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                items(playlists, key = { it.id }) { playlist ->
-                    val representative = playlist.songIds.firstNotNullOfOrNull(songsById::get)
-                    PlaylistCard(
-                        playlist = playlist,
-                        artwork = representative?.artwork,
-                        artworkUri = representative?.uri,
-                        onOpen = { onOpen(playlist.id) },
-                        onRename = { renaming = playlist },
-                        onDelete = { deleting = playlist }
-                    )
-                }
+            items(playlists, key = { it.id }) { playlist ->
+                val representative = playlist.songIds.firstNotNullOfOrNull(songsById::get)
+                PlaylistCard(
+                    playlist = playlist,
+                    artwork = representative?.artwork,
+                    artworkUri = representative?.uri,
+                    onOpen = { onOpen(playlist.id) },
+                    onRename = { renaming = playlist },
+                    onDelete = { deleting = playlist }
+                )
             }
         }
     }
@@ -134,15 +171,48 @@ fun PlaylistsScreen(
 }
 
 @Composable
+fun SmartPlaylistDetailScreen(
+    playlist: SmartPlaylist,
+    songs: List<Song>,
+    currentSongId: Long?,
+    favoriteIds: Set<Long>,
+    onBack: () -> Unit,
+    onPlaySong: (Song, List<Song>) -> Unit,
+    onToggleFavorite: (Song) -> Unit,
+    onArtist: (String) -> Unit,
+    onAlbum: (Song) -> Unit,
+    onPlayNext: (Song) -> Unit,
+    onAddToQueue: (Song) -> Unit,
+    onAddToPlaylist: (Song) -> Unit
+) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        SimpleBackHeader(playlist.title, onBack, songCountLabel(songs.size))
+        if (songs.isEmpty()) {
+            EmptyLibraryPage(playlist.title, "Nenhuma música nesta playlist ainda.", Icons.AutoMirrored.Filled.PlaylistPlay)
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
+                items(songs, key = { it.id }) { song ->
+                    SongRow(
+                        song, song.id == currentSongId, song.id in favoriteIds,
+                        { onPlaySong(song, songs) }, { onToggleFavorite(song) }, { onArtist(song.artist) }, { onAlbum(song) },
+                        { onPlayNext(song) }, { onAddToQueue(song) }, { onAddToPlaylist(song) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun PlaylistDetailScreen(
     playlist: LocalPlaylist,
     songs: List<Song>,
     currentSongId: Long?,
     shuffleEnabled: Boolean,
-    isPlaying: Boolean,
+    repeatEnabled: Boolean,
     onBack: () -> Unit,
-    onTogglePlay: (List<Song>) -> Unit,
     onToggleShuffle: (List<Song>) -> Unit,
+    onToggleRepeat: () -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
     onRemove: (Long) -> Unit,
     onMove: (Int, Int) -> Unit
@@ -172,10 +242,10 @@ fun PlaylistDetailScreen(
                 songs = playlistSongs,
                 cover = cover,
                 shuffleEnabled = shuffleEnabled,
-                isPlaying = isPlaying,
+                repeatEnabled = repeatEnabled,
                 onBack = onBack,
                 onToggleShuffle = onToggleShuffle,
-                onTogglePlay = onTogglePlay
+                onToggleRepeat = onToggleRepeat
             )
         }
         if (playlistSongs.isEmpty()) {
@@ -259,10 +329,10 @@ private fun PlaylistHero(
     songs: List<Song>,
     cover: Song?,
     shuffleEnabled: Boolean,
-    isPlaying: Boolean,
+    repeatEnabled: Boolean,
     onBack: () -> Unit,
     onToggleShuffle: (List<Song>) -> Unit,
-    onTogglePlay: (List<Song>) -> Unit
+    onToggleRepeat: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth().height(58.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -278,30 +348,38 @@ private fun PlaylistHero(
         }
         Text(playlist.name, modifier = Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 18.dp), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(songCountLabel(songs.size), modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 5.dp), color = TextMuted)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
-                { onToggleShuffle(songs) },
-                enabled = songs.isNotEmpty(),
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(22.dp),
-                colors = ButtonDefaults.buttonColors(contentColor = if (shuffleEnabled) Color.White else MaterialTheme.colorScheme.onPrimary)
-            ) {
-                Icon(Icons.Default.Shuffle, null)
-                Spacer(Modifier.width(7.dp))
-                Text("Aleatório")
-            }
-            Button(
-                { onTogglePlay(songs) },
-                enabled = songs.isNotEmpty(),
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(22.dp),
-                colors = ButtonDefaults.buttonColors(contentColor = if (isPlaying) Color.White else MaterialTheme.colorScheme.onPrimary)
-            ) {
-                Icon(if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow, if (isPlaying) "Parar reprodução" else null)
-                Spacer(Modifier.width(7.dp))
-                Text("Reproduzir")
-            }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PlaylistAction(Icons.Default.Shuffle, "Aleatório", shuffleEnabled, songs.isNotEmpty()) { onToggleShuffle(songs) }
+            Spacer(Modifier.width(34.dp))
+            PlaylistAction(Icons.Default.Repeat, "Repetir", repeatEnabled, songs.isNotEmpty(), onToggleRepeat)
         }
+    }
+}
+
+@Composable
+private fun PlaylistAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val tint = when {
+        active -> Color.White
+        enabled -> PrimaryBlue
+        else -> TextMuted
+    }
+    Row(
+        Modifier.clickable(enabled = enabled, onClick = onClick).padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, label, tint = tint, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(label, color = tint, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -367,6 +445,32 @@ private fun PlaylistCard(playlist: LocalPlaylist, artwork: android.graphics.Bitm
                     DropdownMenuItem(text = { Text("Renomear") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
                     DropdownMenuItem(text = { Text("Excluir") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onDelete() })
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmartPlaylistCard(playlist: SmartPlaylist, songCount: Int, onOpen: () -> Unit) {
+    val icon = when (playlist) {
+        SmartPlaylist.FAVORITES -> Icons.Default.Favorite
+        SmartPlaylist.LAST_ADDED -> Icons.Default.History
+        SmartPlaylist.RECENT_PLAYS -> Icons.Default.PlayCircle
+        SmartPlaylist.MOST_PLAYED -> Icons.Default.GraphicEq
+    }
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(66.dp), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = PrimaryBlue, modifier = Modifier.size(34.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(playlist.title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(songCountLabel(songCount), color = TextMuted, fontSize = 12.sp)
             }
         }
     }

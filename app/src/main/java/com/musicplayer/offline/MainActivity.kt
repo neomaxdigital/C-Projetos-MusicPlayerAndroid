@@ -103,6 +103,8 @@ import com.musicplayer.offline.ui.NowPlayingScreen
 import com.musicplayer.offline.ui.PlaylistDetailScreen
 import com.musicplayer.offline.ui.PlaylistPickerDialog
 import com.musicplayer.offline.ui.PlaylistsScreen
+import com.musicplayer.offline.ui.SmartPlaylist
+import com.musicplayer.offline.ui.SmartPlaylistDetailScreen
 import com.musicplayer.offline.ui.PrimaryBlue
 import com.musicplayer.offline.ui.SearchScreen
 import com.musicplayer.offline.ui.QueueScreen
@@ -355,6 +357,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                     currentSong = currentSong,
                     playing = playing,
                     shuffleEnabled = shuffleEnabled,
+                    repeatMode = repeatMode,
                     destination = destination,
                     onDestination = { destination = it },
                     route = route,
@@ -374,6 +377,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                     onMovePlaylistSong = viewModel::movePlaylistSong,
                     onPlaySong = { song, queue ->
                         currentSongId = song.id
+                        viewModel.recordPlay(song.id)
                         playSong(player, queue, song)
                     },
                     onConvertSong = { song, shareAfter -> conversionRequest = ConversionRequest(song, shareAfter) },
@@ -416,6 +420,7 @@ private fun HomeShell(
     currentSong: Song?,
     playing: Boolean,
     shuffleEnabled: Boolean,
+    repeatMode: Int,
     destination: Destination,
     onDestination: (Destination) -> Unit,
     route: LibraryRoute,
@@ -474,9 +479,10 @@ private fun HomeShell(
             route is LibraryRoute.Artist -> onRoute(LibraryRoute.Root(LibraryTab.ARTISTS))
             route is LibraryRoute.Album -> onRoute(LibraryRoute.Root(LibraryTab.ALBUMS))
             route is LibraryRoute.Playlist -> onRoute(LibraryRoute.Root(LibraryTab.PLAYLISTS))
+            route is LibraryRoute.SmartPlaylistDetail -> onRoute(LibraryRoute.Root(LibraryTab.PLAYLISTS))
             route is LibraryRoute.Folder -> onRoute(route.parentFolderRoute())
             route is LibraryRoute.Genre -> onRoute(LibraryRoute.Genres)
-            route == LibraryRoute.Folders || route == LibraryRoute.Genres -> onRoute(returnRoot)
+            route == LibraryRoute.Genres -> onRoute(returnRoot)
             destination != Destination.HOME -> onDestination(Destination.HOME)
         }
     }
@@ -554,7 +560,7 @@ private fun HomeShell(
                         onPlayNext = ::playSongNext,
                         onAddToQueue = ::appendSong,
                         onAddToPlaylist = { playlistSong = it },
-                        onFolders = { openLibraryRoute(LibraryRoute.Folders) },
+                        onOpenFolder = { openLibraryRoute(LibraryRoute.Folder(it)) },
                         onGenres = { openLibraryRoute(LibraryRoute.Genres) },
                         onQueue = openQueue,
                         onEqualizer = { openFeature(FeatureRoute.EQUALIZER) },
@@ -567,8 +573,12 @@ private fun HomeShell(
                             PlaylistsScreen(
                                 state.playlists,
                                 state.songs,
+                                state.favoriteIds,
+                                state.recentIds,
+                                state.playCounts,
                                 onCreatePlaylist,
                                 { onRoute(LibraryRoute.Playlist(it)) },
+                                { onRoute(LibraryRoute.SmartPlaylistDetail(it)) },
                                 onRenamePlaylist,
                                 onDeletePlaylist
                             )
@@ -605,16 +615,8 @@ private fun HomeShell(
                             songs = state.songs,
                             currentSongId = currentSong?.id,
                             shuffleEnabled = shuffleEnabled,
-                            isPlaying = playlistIsPlaying,
+                            repeatEnabled = repeatMode == Player.REPEAT_MODE_ALL,
                             onBack = { onRoute(LibraryRoute.Root(LibraryTab.PLAYLISTS)) },
-                            onTogglePlay = { songs ->
-                                if (playlistIsPlaying) {
-                                    player?.stop()
-                                } else {
-                                    player?.shuffleModeEnabled = false
-                                    songs.firstOrNull()?.let { onPlaySong(it, songs) }
-                                }
-                            },
                             onToggleShuffle = { songs ->
                                 val activePlayer = player ?: return@PlaylistDetailScreen
                                 val enableShuffle = !activePlayer.shuffleModeEnabled
@@ -623,25 +625,33 @@ private fun HomeShell(
                                     songs.randomOrNull()?.let { onPlaySong(it, songs) }
                                 }
                             },
+                            onToggleRepeat = {
+                                player?.let { activePlayer ->
+                                    activePlayer.repeatMode = if (activePlayer.repeatMode == Player.REPEAT_MODE_ALL) {
+                                        Player.REPEAT_MODE_OFF
+                                    } else {
+                                        Player.REPEAT_MODE_ALL
+                                    }
+                                }
+                            },
                             onPlaySong = onPlaySong,
                             onRemove = { onRemoveSongFromPlaylist(playlist.id, it) },
                             onMove = { from, to -> onMovePlaylistSong(playlist.id, from, to) }
                         )
                     } ?: EmptyLibraryPage("Playlist", "Esta playlist não existe mais.", Icons.AutoMirrored.Filled.QueueMusic)
-                    LibraryRoute.Folders -> FolderBrowserScreen(
-                        songs = state.songs,
-                        currentPath = null,
+                    is LibraryRoute.SmartPlaylistDetail -> SmartPlaylistDetailScreen(
+                        playlist = currentRoute.playlist,
+                        songs = state.smartPlaylistSongs(currentRoute.playlist),
                         currentSongId = currentSong?.id,
                         favoriteIds = state.favoriteIds,
-                        onBack = { onRoute(returnRoot) },
-                        onOpenFolder = { onRoute(LibraryRoute.Folder(it)) },
-                        onSong = onPlaySong,
-                        onFavorite = onToggleFavorite,
+                        onBack = { onRoute(LibraryRoute.Root(LibraryTab.PLAYLISTS)) },
+                        onPlaySong = onPlaySong,
+                        onToggleFavorite = onToggleFavorite,
                         onArtist = ::openArtist,
                         onAlbum = ::openAlbum,
                         onPlayNext = ::playSongNext,
-                        onAddQueue = ::appendSong,
-                        onAddPlaylist = { playlistSong = it }
+                        onAddToQueue = ::appendSong,
+                        onAddToPlaylist = { playlistSong = it }
                     )
                     is LibraryRoute.Folder -> FolderBrowserScreen(
                         songs = state.songs,
@@ -745,7 +755,14 @@ private fun hasAudioPermission(context: Context): Boolean =
 
 private fun LibraryRoute.Folder.parentFolderRoute(): LibraryRoute {
     val parent = path.trim().trimEnd('/').substringBeforeLast('/', missingDelimiterValue = "")
-    return parent.takeIf(String::isNotBlank)?.let(LibraryRoute::Folder) ?: LibraryRoute.Folders
+    return parent.takeIf(String::isNotBlank)?.let(LibraryRoute::Folder) ?: LibraryRoute.Root(LibraryTab.FOLDERS)
+}
+
+private fun LibraryUiState.smartPlaylistSongs(playlist: SmartPlaylist): List<Song> = when (playlist) {
+    SmartPlaylist.FAVORITES -> favoriteSongs
+    SmartPlaylist.LAST_ADDED -> songs.sortedByDescending(Song::dateAdded)
+    SmartPlaylist.RECENT_PLAYS -> recentSongs
+    SmartPlaylist.MOST_PLAYED -> mostPlayedSongs
 }
 
 private fun Player.toSnapshot(): PlaybackSnapshot = PlaybackSnapshot(

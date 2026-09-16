@@ -91,7 +91,7 @@ fun LibraryRootScreen(
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
     onAddToPlaylist: (Song) -> Unit,
-    onFolders: () -> Unit,
+    onOpenFolder: (String) -> Unit,
     onGenres: () -> Unit,
     onQueue: () -> Unit,
     onEqualizer: () -> Unit,
@@ -104,7 +104,7 @@ fun LibraryRootScreen(
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         LibraryTopBar(
-            tab.title, onSearch, onFolders, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings,
+            tab.title, onSearch, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings,
             onAddFolder, onAddSong, onRefreshLibrary, showMusicActions = tab == LibraryTab.SONGS
         )
         TabRow(
@@ -126,7 +126,9 @@ fun LibraryRootScreen(
                         Text(
                             item.title,
                             color = if (tab == item) MaterialTheme.colorScheme.onSurface else TextMuted,
-                            fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (tab == item) FontWeight.SemiBold else FontWeight.Normal,
+                            fontSize = 13.sp,
+                            maxLines = 1
                         )
                     }
                 )
@@ -140,6 +142,20 @@ fun LibraryRootScreen(
             LibraryTab.ARTISTS -> ArtistsList(songs.asArtists(), onArtist)
             LibraryTab.ALBUMS -> AlbumsGrid(songs.asAlbums()) { onAlbum(it.songs.first()) }
             LibraryTab.PLAYLISTS -> playlistContent()
+            LibraryTab.FOLDERS -> FolderBrowserContent(
+                songs = songs,
+                currentPath = null,
+                currentSongId = currentSongId,
+                favoriteIds = favoriteIds,
+                onOpenFolder = onOpenFolder,
+                onSong = onSong,
+                onFavorite = onToggleFavorite,
+                onArtist = onArtist,
+                onAlbum = onAlbum,
+                onPlayNext = onPlayNext,
+                onAddQueue = onAddToQueue,
+                onAddPlaylist = onAddToPlaylist
+            )
         }
     }
 }
@@ -429,7 +445,6 @@ private fun AlbumsGrid(albums: List<AlbumGroup>, onAlbum: (AlbumGroup) -> Unit) 
 private fun LibraryTopBar(
     title: String,
     onSearch: () -> Unit,
-    onFolders: (() -> Unit)? = null,
     onGenres: (() -> Unit)? = null,
     onQueue: (() -> Unit)? = null,
     onEqualizer: (() -> Unit)? = null,
@@ -447,7 +462,7 @@ private fun LibraryTopBar(
         Spacer(Modifier.width(10.dp))
         Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         IconButton(onSearch) { Icon(Icons.Default.Search, "Pesquisar") }
-        if (showMusicActions && onFolders != null && onAddFolder != null && onAddSong != null && onRefreshLibrary != null) {
+        if (showMusicActions && onAddFolder != null && onAddSong != null && onRefreshLibrary != null) {
             Box {
                 IconButton(onClick = { musicActionsOpen = true }) {
                     Icon(Icons.Default.Add, "Adicionar músicas")
@@ -457,11 +472,6 @@ private fun LibraryTopBar(
                     onDismissRequest = { musicActionsOpen = false },
                     containerColor = SurfaceDark
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Pasta") },
-                        leadingIcon = { Icon(Icons.Default.Folder, null) },
-                        onClick = { musicActionsOpen = false; onFolders() }
-                    )
                     DropdownMenuItem(
                         text = { Text("Procurar pasta") },
                         leadingIcon = { Icon(Icons.Default.Folder, null) },
@@ -480,10 +490,9 @@ private fun LibraryTopBar(
                 }
             }
         }
-        if (onFolders != null && onGenres != null && onQueue != null) Box {
+        if (onGenres != null && onQueue != null) Box {
             IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, "Mais opções da biblioteca") }
             DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }, containerColor = SurfaceDark) {
-                DropdownMenuItem(text = { Text("Pastas") }, leadingIcon = { Icon(Icons.Default.Folder, null) }, onClick = { moreOpen = false; onFolders() })
                 DropdownMenuItem(text = { Text("Gêneros") }, leadingIcon = { Icon(Icons.Default.Category, null) }, onClick = { moreOpen = false; onGenres() })
                 DropdownMenuItem(text = { Text("Fila de reprodução") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) }, onClick = { moreOpen = false; onQueue() })
                 if (onEqualizer != null) DropdownMenuItem(text = { Text("Equalizador") }, leadingIcon = { Icon(Icons.Default.GraphicEq, null) }, onClick = { moreOpen = false; onEqualizer() })

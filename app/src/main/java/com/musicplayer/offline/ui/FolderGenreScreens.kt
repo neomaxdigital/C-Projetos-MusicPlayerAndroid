@@ -70,43 +70,76 @@ fun FolderBrowserScreen(
     onAddPlaylist: (Song) -> Unit
 ) {
     val normalizedPath = currentPath.orEmpty().trim().trim('/')
-    val childPaths = songs.asDirectChildFolders(normalizedPath)
-    val songsHere = songs.filter { it.normalizedFolderPath() == normalizedPath }
     val title = normalizedPath.substringAfterLast('/').ifBlank { "Pastas" }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         SimpleBackHeader(title, onBack, normalizedPath.takeIf { it.isNotBlank() })
-        if (childPaths.isEmpty() && songsHere.isEmpty()) {
-            EmptyLibraryPage("Pasta", "Nenhuma música foi encontrada nesta pasta.", Icons.Default.Folder)
-        } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
-                items(childPaths, key = { "folder:$it" }) { path ->
-                    val count = songs.count { song ->
-                        val songPath = song.normalizedFolderPath()
-                        songPath == path || songPath.startsWith("$path/")
-                    }
-                    Card(
-                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp).clickable { onOpenFolder(path) },
-                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Folder, null, tint = PrimaryBlue)
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(path.substringAfterLast('/'), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(songCount(count), color = TextMuted, fontSize = 12.sp)
-                            }
+        FolderBrowserContent(
+            songs = songs,
+            currentPath = currentPath,
+            currentSongId = currentSongId,
+            favoriteIds = favoriteIds,
+            onOpenFolder = onOpenFolder,
+            onSong = onSong,
+            onFavorite = onFavorite,
+            onArtist = onArtist,
+            onAlbum = onAlbum,
+            onPlayNext = onPlayNext,
+            onAddQueue = onAddQueue,
+            onAddPlaylist = onAddPlaylist
+        )
+    }
+}
+
+@Composable
+fun FolderBrowserContent(
+    songs: List<Song>,
+    currentPath: String?,
+    currentSongId: Long?,
+    favoriteIds: Set<Long>,
+    onOpenFolder: (String) -> Unit,
+    onSong: (Song, List<Song>) -> Unit,
+    onFavorite: (Song) -> Unit,
+    onArtist: (String) -> Unit,
+    onAlbum: (Song) -> Unit,
+    onPlayNext: (Song) -> Unit,
+    onAddQueue: (Song) -> Unit,
+    onAddPlaylist: (Song) -> Unit
+) {
+    val normalizedPath = currentPath.orEmpty().trim().trim('/')
+    val childPaths = songs.asDirectChildFolders(normalizedPath)
+    val songsHere = songs.filter { it.normalizedFolderPath() == normalizedPath }
+
+    if (childPaths.isEmpty() && songsHere.isEmpty()) {
+        EmptyLibraryPage("Pasta", "Nenhuma música foi encontrada nesta pasta.", Icons.Default.Folder)
+    } else {
+        LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
+            items(childPaths, key = { "folder:$it" }) { path ->
+                val count = songs.count { song ->
+                    val songPath = song.normalizedFolderPath()
+                    songPath == path || songPath.startsWith("$path/")
+                }
+                Card(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp).clickable { onOpenFolder(path) },
+                    colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Folder, null, tint = PrimaryBlue)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(path.substringAfterLast('/'), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(songCount(count), color = TextMuted, fontSize = 12.sp)
                         }
                     }
                 }
-                items(songsHere, key = { "song:${it.id}" }) { song ->
-                    SongRow(
-                        song, song.id == currentSongId, song.id in favoriteIds,
-                        { onSong(song, songsHere) }, { onFavorite(song) }, { onArtist(song.artist) }, { onAlbum(song) },
-                        { onPlayNext(song) }, { onAddQueue(song) }, { onAddPlaylist(song) }
-                    )
-                }
+            }
+            items(songsHere, key = { "song:${it.id}" }) { song ->
+                SongRow(
+                    song, song.id == currentSongId, song.id in favoriteIds,
+                    { onSong(song, songsHere) }, { onFavorite(song) }, { onArtist(song.artist) }, { onAlbum(song) },
+                    { onPlayNext(song) }, { onAddQueue(song) }, { onAddPlaylist(song) }
+                )
             }
         }
     }
