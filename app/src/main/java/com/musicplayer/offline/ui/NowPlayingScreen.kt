@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.util.Size
 import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,11 +23,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -70,6 +75,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -86,6 +92,7 @@ import com.musicplayer.offline.R
 import com.musicplayer.offline.music.AudioFileSupport
 import com.musicplayer.offline.music.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -192,7 +199,7 @@ fun NowPlayingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
-                NowPlayingArtwork(song = song, size = artSize)
+                NowPlayingArtwork(song = song, size = artSize, playing = playing)
                 Spacer(Modifier.height(if (compact) 14.dp else 24.dp))
                 Text(
                     title,
@@ -247,7 +254,7 @@ fun NowPlayingScreen(
 }
 
 @Composable
-private fun NowPlayingArtwork(song: Song?, size: Dp) {
+private fun NowPlayingArtwork(song: Song?, size: Dp, playing: Boolean) {
     val context = LocalContext.current
     val pixelSize = with(LocalDensity.current) { size.roundToPx().coerceAtLeast(1) }
     var artwork by remember(song?.id, pixelSize) { mutableStateOf(song?.artwork) }
@@ -272,14 +279,82 @@ private fun NowPlayingArtwork(song: Song?, size: Dp) {
             modifier = Modifier.size(size).clip(shape),
             contentScale = ContentScale.Crop
         )
-        resolved -> Image(
-            painter = painterResource(R.drawable.juke_turntable),
-            contentDescription = "Toca-discos JUKE",
-            modifier = Modifier.size(size).clip(shape),
-            contentScale = ContentScale.Fit
-        )
+        resolved -> TurntableArtwork(size = size, playing = playing && song != null)
         else -> Box(Modifier.size(size).clip(shape).background(SurfaceRaised))
     }
+}
+
+@Composable
+private fun TurntableArtwork(size: Dp, playing: Boolean) {
+    val rotation = remember { Animatable(0f) }
+    LaunchedEffect(playing) {
+        if (playing) {
+            while (isActive) {
+                rotation.animateTo(
+                    targetValue = rotation.value + 360f,
+                    animationSpec = tween(durationMillis = 9_000, easing = LinearEasing)
+                )
+                rotation.snapTo(rotation.value % 360f)
+            }
+        } else {
+            rotation.stop()
+        }
+    }
+
+    val painter = painterResource(R.drawable.juke_turntable)
+    val discSize = size * .72f
+    val discLeft = (size - discSize) / 2
+    val discTop = discLeft + size * .035f
+
+    Box(Modifier.size(size).clip(RoundedCornerShape(22.dp))) {
+        Image(
+            painter = painter,
+            contentDescription = "Toca-discos JUKE",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+        Box(
+            modifier = Modifier
+                .size(discSize)
+                .align(Alignment.Center)
+                .offset(y = size * .035f)
+                .clip(CircleShape)
+                .graphicsLayer { rotationZ = rotation.value }
+        ) {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.size(size).offset(x = -discLeft, y = -discTop),
+                contentScale = ContentScale.Fit
+            )
+        }
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().clip(TurntableTonearmMask),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+private val TurntableTonearmMask = GenericShape { shapeSize, _ ->
+    val width = shapeSize.width
+    val height = shapeSize.height
+    moveTo(.80f * width, .10f * height)
+    cubicTo(.89f * width, .10f * height, .93f * width, .15f * height, .93f * width, .23f * height)
+    lineTo(.88f * width, .29f * height)
+    cubicTo(.87f * width, .43f * height, .83f * width, .56f * height, .77f * width, .67f * height)
+    lineTo(.80f * width, .70f * height)
+    lineTo(.77f * width, .78f * height)
+    lineTo(.69f * width, .86f * height)
+    lineTo(.61f * width, .83f * height)
+    lineTo(.62f * width, .77f * height)
+    lineTo(.68f * width, .72f * height)
+    cubicTo(.73f * width, .64f * height, .76f * width, .54f * height, .77f * width, .42f * height)
+    lineTo(.78f * width, .30f * height)
+    cubicTo(.73f * width, .26f * height, .72f * width, .21f * height, .73f * width, .17f * height)
+    cubicTo(.74f * width, .12f * height, .76f * width, .10f * height, .80f * width, .10f * height)
+    close()
 }
 
 @Composable
