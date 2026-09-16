@@ -145,10 +145,7 @@ fun NowPlayingScreen(
                 listOf("Música", "Letra").forEachIndexed { index, label ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = {
-                            selectedTab = index
-                            if (index == 1) openLyrics()
-                        },
+                        onClick = { selectedTab = index },
                         text = {
                             Text(
                                 label,
