@@ -5,9 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Size
 import android.widget.Toast
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -73,7 +70,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -90,7 +86,6 @@ import com.musicplayer.offline.R
 import com.musicplayer.offline.music.AudioFileSupport
 import com.musicplayer.offline.music.Song
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -197,7 +192,7 @@ fun NowPlayingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
-                NowPlayingArtwork(song = song, size = artSize, playing = playing)
+                NowPlayingArtwork(song = song, size = artSize)
                 Spacer(Modifier.height(if (compact) 14.dp else 24.dp))
                 Text(
                     title,
@@ -252,7 +247,7 @@ fun NowPlayingScreen(
 }
 
 @Composable
-private fun NowPlayingArtwork(song: Song?, size: Dp, playing: Boolean) {
+private fun NowPlayingArtwork(song: Song?, size: Dp) {
     val context = LocalContext.current
     val pixelSize = with(LocalDensity.current) { size.roundToPx().coerceAtLeast(1) }
     var artwork by remember(song?.id, pixelSize) { mutableStateOf(song?.artwork) }
@@ -277,50 +272,19 @@ private fun NowPlayingArtwork(song: Song?, size: Dp, playing: Boolean) {
             modifier = Modifier.size(size).clip(shape),
             contentScale = ContentScale.Crop
         )
-        resolved -> TurntableArtwork(size = size, playing = playing && song != null)
+        resolved -> TurntableArtwork(size = size)
         else -> Box(Modifier.size(size).clip(shape).background(SurfaceRaised))
     }
 }
 
 @Composable
-private fun TurntableArtwork(size: Dp, playing: Boolean) {
-    val rotation = remember { Animatable(0f) }
-    LaunchedEffect(playing) {
-        if (playing) {
-            while (isActive) {
-                rotation.animateTo(
-                    targetValue = rotation.value + 360f,
-                    animationSpec = tween(durationMillis = 9_000, easing = LinearEasing)
-                )
-                rotation.snapTo(rotation.value % 360f)
-            }
-        } else {
-            rotation.stop()
-        }
-    }
-
-    Box(Modifier.size(size).clip(RoundedCornerShape(22.dp))) {
-        Image(
-            painter = painterResource(R.drawable.juke_turntable_base),
-            contentDescription = "Toca-discos JUKE",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
-        Image(
-            painter = painterResource(R.drawable.juke_turntable_vinyl),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { rotationZ = rotation.value },
-            contentScale = ContentScale.Fit
-        )
-        Image(
-            painter = painterResource(R.drawable.juke_turntable_tonearm),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
-    }
+private fun TurntableArtwork(size: Dp) {
+    Image(
+        painter = painterResource(R.drawable.juke_turntable_static),
+        contentDescription = "Toca-discos JUKE",
+        modifier = Modifier.size(size).clip(RoundedCornerShape(22.dp)),
+        contentScale = ContentScale.Fit
+    )
 }
 
 @Composable
