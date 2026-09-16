@@ -48,6 +48,70 @@ fun FoldersScreen(folders: List<FolderGroup>, onBack: () -> Unit, onOpen: (Strin
     )
 }
 
+/**
+ * A hierarchical view of the folders already accessible to the library. Android only exposes
+ * folders containing audio through MediaStore, plus folders granted through SAF; selecting
+ * "Procurar pasta" is the way to grant another location.
+ */
+@Composable
+fun FolderBrowserScreen(
+    songs: List<Song>,
+    currentPath: String?,
+    currentSongId: Long?,
+    favoriteIds: Set<Long>,
+    onBack: () -> Unit,
+    onOpenFolder: (String) -> Unit,
+    onSong: (Song, List<Song>) -> Unit,
+    onFavorite: (Song) -> Unit,
+    onArtist: (String) -> Unit,
+    onAlbum: (Song) -> Unit,
+    onPlayNext: (Song) -> Unit,
+    onAddQueue: (Song) -> Unit,
+    onAddPlaylist: (Song) -> Unit
+) {
+    val normalizedPath = currentPath.orEmpty().trim().trim('/')
+    val childPaths = songs.asDirectChildFolders(normalizedPath)
+    val songsHere = songs.filter { it.normalizedFolderPath() == normalizedPath }
+    val title = normalizedPath.substringAfterLast('/').ifBlank { "Pastas" }
+
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        SimpleBackHeader(title, onBack, normalizedPath.takeIf { it.isNotBlank() })
+        if (childPaths.isEmpty() && songsHere.isEmpty()) {
+            EmptyLibraryPage("Pasta", "Nenhuma música foi encontrada nesta pasta.", Icons.Default.Folder)
+        } else {
+            LazyColumn(contentPadding = PaddingValues(bottom = 12.dp)) {
+                items(childPaths, key = { "folder:$it" }) { path ->
+                    val count = songs.count { song ->
+                        val songPath = song.normalizedFolderPath()
+                        songPath == path || songPath.startsWith("$path/")
+                    }
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp).clickable { onOpenFolder(path) },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Folder, null, tint = PrimaryBlue)
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(path.substringAfterLast('/'), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(songCount(count), color = TextMuted, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+                items(songsHere, key = { "song:${it.id}" }) { song ->
+                    SongRow(
+                        song, song.id == currentSongId, song.id in favoriteIds,
+                        { onSong(song, songsHere) }, { onFavorite(song) }, { onArtist(song.artist) }, { onAlbum(song) },
+                        { onPlayNext(song) }, { onAddQueue(song) }, { onAddPlaylist(song) }
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun GenresScreen(genres: List<GenreGroup>, onBack: () -> Unit, onOpen: (String) -> Unit) {
     GroupBrowser(
@@ -198,3 +262,16 @@ fun SimpleBackHeader(title: String, onBack: () -> Unit, subtitle: String? = null
 }
 
 private fun songCount(count: Int) = if (count == 1) "1 música" else "$count músicas"
+
+private fun List<Song>.asDirectChildFolders(parentPath: String): List<String> =
+    mapNotNull { song ->
+        val path = song.normalizedFolderPath()
+        when {
+            path.isBlank() || path == parentPath -> null
+            parentPath.isBlank() -> path.substringBefore('/').takeIf(String::isNotBlank)
+            path.startsWith("$parentPath/") -> "$parentPath/${path.removePrefix("$parentPath/").substringBefore('/')}"
+            else -> null
+        }
+    }.distinct().sortedWith(String.CASE_INSENSITIVE_ORDER)
+
+private fun Song.normalizedFolderPath(): String = relativePath.trim().trim('/')

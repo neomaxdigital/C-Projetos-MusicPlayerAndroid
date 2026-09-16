@@ -72,7 +72,6 @@ import com.musicplayer.offline.music.Song
 import com.musicplayer.offline.music.SongSort
 import com.musicplayer.offline.music.asAlbums
 import com.musicplayer.offline.music.asArtists
-import com.musicplayer.offline.music.asFolders
 import com.musicplayer.offline.music.asGenres
 import com.musicplayer.offline.music.sortedByOption
 import com.musicplayer.offline.playback.PlaybackService
@@ -90,8 +89,7 @@ import com.musicplayer.offline.ui.SleepTimerScreen
 import com.musicplayer.offline.ui.LyricsScreen
 import com.musicplayer.offline.ui.SettingsScreen
 import com.musicplayer.offline.ui.EmptyLibraryPage
-import com.musicplayer.offline.ui.FolderDetailScreen
-import com.musicplayer.offline.ui.FoldersScreen
+import com.musicplayer.offline.ui.FolderBrowserScreen
 import com.musicplayer.offline.ui.GenreDetailScreen
 import com.musicplayer.offline.ui.GenresScreen
 import com.musicplayer.offline.ui.LibraryRootScreen
@@ -444,7 +442,6 @@ private fun HomeShell(
 ) {
     val albums = remember(state.songs) { state.songs.asAlbums() }
     val artists = remember(state.songs) { state.songs.asArtists() }
-    val folders = remember(state.songs) { state.songs.asFolders() }
     val genres = remember(state.songs) { state.songs.asGenres() }
     val songsById = remember(state.songs) { state.songs.associateBy { it.id } }
     val sortedSongs = remember(state.songs, state.sort) { state.songs.sortedByOption(state.sort) }
@@ -477,7 +474,7 @@ private fun HomeShell(
             route is LibraryRoute.Artist -> onRoute(LibraryRoute.Root(LibraryTab.ARTISTS))
             route is LibraryRoute.Album -> onRoute(LibraryRoute.Root(LibraryTab.ALBUMS))
             route is LibraryRoute.Playlist -> onRoute(LibraryRoute.Root(LibraryTab.PLAYLISTS))
-            route is LibraryRoute.Folder -> onRoute(LibraryRoute.Folders)
+            route is LibraryRoute.Folder -> onRoute(route.parentFolderRoute())
             route is LibraryRoute.Genre -> onRoute(LibraryRoute.Genres)
             route == LibraryRoute.Folders || route == LibraryRoute.Genres -> onRoute(returnRoot)
             destination != Destination.HOME -> onDestination(Destination.HOME)
@@ -631,20 +628,36 @@ private fun HomeShell(
                             onMove = { from, to -> onMovePlaylistSong(playlist.id, from, to) }
                         )
                     } ?: EmptyLibraryPage("Playlist", "Esta playlist não existe mais.", Icons.AutoMirrored.Filled.QueueMusic)
-                    LibraryRoute.Folders -> FoldersScreen(folders, { onRoute(returnRoot) }) { onRoute(LibraryRoute.Folder(it)) }
-                    is LibraryRoute.Folder -> folders.firstOrNull { it.path == currentRoute.path }?.let { folder ->
-                        FolderDetailScreen(
-                            folder, currentSong?.id, state.favoriteIds,
-                            onBack = { onRoute(LibraryRoute.Folders) },
-                            onSong = onPlaySong,
-                            onFavorite = onToggleFavorite,
-                            onArtist = ::openArtist,
-                            onAlbum = ::openAlbum,
-                            onPlayNext = ::playSongNext,
-                            onAddQueue = ::appendSong,
-                            onAddPlaylist = { playlistSong = it }
-                        )
-                    } ?: EmptyLibraryPage("Pasta", "Esta pasta não está mais disponível.", Icons.AutoMirrored.Filled.QueueMusic)
+                    LibraryRoute.Folders -> FolderBrowserScreen(
+                        songs = state.songs,
+                        currentPath = null,
+                        currentSongId = currentSong?.id,
+                        favoriteIds = state.favoriteIds,
+                        onBack = { onRoute(returnRoot) },
+                        onOpenFolder = { onRoute(LibraryRoute.Folder(it)) },
+                        onSong = onPlaySong,
+                        onFavorite = onToggleFavorite,
+                        onArtist = ::openArtist,
+                        onAlbum = ::openAlbum,
+                        onPlayNext = ::playSongNext,
+                        onAddQueue = ::appendSong,
+                        onAddPlaylist = { playlistSong = it }
+                    )
+                    is LibraryRoute.Folder -> FolderBrowserScreen(
+                        songs = state.songs,
+                        currentPath = currentRoute.path,
+                        currentSongId = currentSong?.id,
+                        favoriteIds = state.favoriteIds,
+                        onBack = { onRoute(currentRoute.parentFolderRoute()) },
+                        onOpenFolder = { onRoute(LibraryRoute.Folder(it)) },
+                        onSong = onPlaySong,
+                        onFavorite = onToggleFavorite,
+                        onArtist = ::openArtist,
+                        onAlbum = ::openAlbum,
+                        onPlayNext = ::playSongNext,
+                        onAddQueue = ::appendSong,
+                        onAddPlaylist = { playlistSong = it }
+                    )
                     LibraryRoute.Genres -> GenresScreen(genres, { onRoute(returnRoot) }) { onRoute(LibraryRoute.Genre(it)) }
                     is LibraryRoute.Genre -> genres.firstOrNull { it.name == currentRoute.name }?.let { genre ->
                         GenreDetailScreen(
@@ -729,6 +742,11 @@ private fun audioPermission(): String =
 
 private fun hasAudioPermission(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED
+
+private fun LibraryRoute.Folder.parentFolderRoute(): LibraryRoute {
+    val parent = path.trim().trimEnd('/').substringBeforeLast('/', missingDelimiterValue = "")
+    return parent.takeIf(String::isNotBlank)?.let(LibraryRoute::Folder) ?: LibraryRoute.Folders
+}
 
 private fun Player.toSnapshot(): PlaybackSnapshot = PlaybackSnapshot(
     queueIds = (0 until mediaItemCount).mapNotNull { getMediaItemAt(it).mediaId.toLongOrNull() },

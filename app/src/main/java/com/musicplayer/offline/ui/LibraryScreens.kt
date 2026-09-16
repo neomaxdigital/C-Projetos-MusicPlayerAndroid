@@ -105,7 +105,7 @@ fun LibraryRootScreen(
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         LibraryTopBar(
             tab.title, onSearch, onFolders, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings,
-            onAddFolder, onAddSong, onRefreshLibrary
+            onAddFolder, onAddSong, onRefreshLibrary, showMusicActions = tab == LibraryTab.SONGS
         )
         TabRow(
             selectedTabIndex = tab.ordinal,
@@ -437,48 +437,58 @@ private fun LibraryTopBar(
     onSettings: (() -> Unit)? = null,
     onAddFolder: (() -> Unit)? = null,
     onAddSong: (() -> Unit)? = null,
-    onRefreshLibrary: (() -> Unit)? = null
+    onRefreshLibrary: (() -> Unit)? = null,
+    showMusicActions: Boolean = false
 ) {
     var moreOpen by remember { mutableStateOf(false) }
-    var addMusicOpen by remember { mutableStateOf(false) }
+    var musicActionsOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         JukeHorizontalLogo(Modifier.width(88.dp).height(30.dp))
         Spacer(Modifier.width(10.dp))
         Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         IconButton(onSearch) { Icon(Icons.Default.Search, "Pesquisar") }
-        if (onFolders != null && onGenres != null && onQueue != null) Box {
-            IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, "Mais opções da biblioteca") }
-            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false; addMusicOpen = false }) {
-                if (onAddFolder != null && onAddSong != null && onRefreshLibrary != null) {
+        if (showMusicActions && onFolders != null && onAddFolder != null && onAddSong != null && onRefreshLibrary != null) {
+            Box {
+                IconButton(onClick = { musicActionsOpen = true }) {
+                    Icon(Icons.Default.Add, "Adicionar músicas")
+                }
+                DropdownMenu(
+                    expanded = musicActionsOpen,
+                    onDismissRequest = { musicActionsOpen = false },
+                    containerColor = SurfaceDark
+                ) {
                     DropdownMenuItem(
-                        text = { Text("Adicionar músicas") },
-                        leadingIcon = { Icon(Icons.Default.Add, null) },
-                        onClick = { moreOpen = false; addMusicOpen = true }
+                        text = { Text("Pasta") },
+                        leadingIcon = { Icon(Icons.Default.Folder, null) },
+                        onClick = { musicActionsOpen = false; onFolders() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Procurar pasta") },
+                        leadingIcon = { Icon(Icons.Default.Folder, null) },
+                        onClick = { musicActionsOpen = false; onAddFolder() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Procurar música") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        onClick = { musicActionsOpen = false; onAddSong() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Atualizar biblioteca") },
+                        leadingIcon = { Icon(Icons.Default.Refresh, null) },
+                        onClick = { musicActionsOpen = false; onRefreshLibrary() }
                     )
                 }
+            }
+        }
+        if (onFolders != null && onGenres != null && onQueue != null) Box {
+            IconButton({ moreOpen = true }) { Icon(Icons.Default.MoreVert, "Mais opções da biblioteca") }
+            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }, containerColor = SurfaceDark) {
                 DropdownMenuItem(text = { Text("Pastas") }, leadingIcon = { Icon(Icons.Default.Folder, null) }, onClick = { moreOpen = false; onFolders() })
                 DropdownMenuItem(text = { Text("Gêneros") }, leadingIcon = { Icon(Icons.Default.Category, null) }, onClick = { moreOpen = false; onGenres() })
                 DropdownMenuItem(text = { Text("Fila de reprodução") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) }, onClick = { moreOpen = false; onQueue() })
                 if (onEqualizer != null) DropdownMenuItem(text = { Text("Equalizador") }, leadingIcon = { Icon(Icons.Default.GraphicEq, null) }, onClick = { moreOpen = false; onEqualizer() })
                 if (onSleepTimer != null) DropdownMenuItem(text = { Text("Timer para dormir") }, leadingIcon = { Icon(Icons.Default.Bedtime, null) }, onClick = { moreOpen = false; onSleepTimer() })
                 if (onSettings != null) DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { moreOpen = false; onSettings() })
-            }
-            DropdownMenu(expanded = addMusicOpen, onDismissRequest = { addMusicOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text("Procurar pasta") },
-                    leadingIcon = { Icon(Icons.Default.Folder, null) },
-                    onClick = { addMusicOpen = false; onAddFolder?.invoke() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Procurar música") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    onClick = { addMusicOpen = false; onAddSong?.invoke() }
-                )
-                DropdownMenuItem(
-                    text = { Text("Atualizar biblioteca") },
-                    leadingIcon = { Icon(Icons.Default.Refresh, null) },
-                    onClick = { addMusicOpen = false; onRefreshLibrary?.invoke() }
-                )
             }
         }
     }
