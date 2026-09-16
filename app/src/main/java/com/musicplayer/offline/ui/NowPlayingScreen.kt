@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,8 +41,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,7 +67,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -84,11 +82,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
-import com.musicplayer.offline.music.Song
+import com.musicplayer.offline.R
 import com.musicplayer.offline.music.AudioFileSupport
+import com.musicplayer.offline.music.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.musicplayer.offline.R
 
 @Composable
 fun NowPlayingScreen(
@@ -199,7 +197,8 @@ fun NowPlayingScreen(
                 Text(
                     title,
                     modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.headlineSmall,
+                    fontSize = if (compact) 24.sp else 28.sp,
+                    lineHeight = if (compact) 28.sp else 32.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
@@ -208,9 +207,9 @@ fun NowPlayingScreen(
                 if (artist.isNotBlank()) {
                     Text(
                         artist,
-                        modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         color = TextMuted,
-                        fontSize = 17.sp,
+                        fontSize = if (compact) 15.sp else 17.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -275,8 +274,8 @@ private fun NowPlayingArtwork(song: Song?, size: Dp) {
         )
         resolved -> Image(
             painter = painterResource(R.drawable.juke_turntable),
-            contentDescription = "Toca-discos",
-            modifier = Modifier.size(size),
+            contentDescription = "Toca-discos JUKE",
+            modifier = Modifier.size(size).clip(shape),
             contentScale = ContentScale.Fit
         )
         else -> Box(Modifier.size(size).clip(shape).background(SurfaceRaised))
@@ -291,17 +290,25 @@ private fun RowScope.NowPlayingAction(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val color = when {
-        !enabled -> TextMuted.copy(alpha = .45f)
+    val iconColor = when {
+        !enabled -> TextMuted.copy(alpha = .40f)
         active -> PrimaryBlue
-        else -> MaterialTheme.colorScheme.onSurface
+        else -> PrimaryBlue
     }
+    val labelColor = if (enabled) TextMuted else TextMuted.copy(alpha = .40f)
+
     Column(
         Modifier.weight(1f).clickable(enabled = enabled, onClick = onClick).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(icon, label, tint = color, modifier = Modifier.size(30.dp))
-        Text(label, color = color, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(icon, label, tint = iconColor, modifier = Modifier.size(30.dp))
+        Text(
+            label,
+            color = labelColor,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -309,14 +316,19 @@ private fun RowScope.NowPlayingAction(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun PlaybackProgress(player: Player?, position: Long, duration: Long) {
     val activeTrack = PrimaryBlue
-    val inactiveTrack = SurfaceRaised
+    val inactiveTrack = JukePrimaryContainer.copy(alpha = .78f)
+
     Slider(
         value = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f,
         onValueChange = { player?.seekTo((it * duration).toLong()) },
         enabled = duration > 0,
-        colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = activeTrack, inactiveTrackColor = inactiveTrack),
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = activeTrack,
+            inactiveTrackColor = inactiveTrack
+        ),
         track = { sliderState ->
-            Canvas(Modifier.fillMaxWidth().height(8.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(6.dp)) {
                 val centerY = size.height / 2f
                 drawLine(
                     color = inactiveTrack,
@@ -337,10 +349,10 @@ private fun PlaybackProgress(player: Player?, position: Long, duration: Long) {
         thumb = {
             Box(
                 Modifier
-                    .size(18.dp)
-                    .shadow(4.dp, CircleShape)
+                    .size(20.dp)
+                    .shadow(5.dp, CircleShape)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, PrimaryBlue.copy(alpha = .55f), CircleShape)
+                    .border(2.dp, PrimaryBlue.copy(alpha = .75f), CircleShape)
             )
         }
     )
@@ -368,9 +380,18 @@ private fun PlaybackControls(player: Player?, playing: Boolean, shuffleEnabled: 
                     }
                 }
             },
-            Modifier.size(playSize).clip(CircleShape).border(1.dp, PrimaryBlue, CircleShape).background(SurfaceDark)
+            Modifier
+                .size(playSize)
+                .clip(CircleShape)
+                .border(1.dp, PrimaryBlue, CircleShape)
+                .background(SurfaceDark)
         ) {
-            Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, if (playing) "Pausar" else "Tocar", tint = Color.White, modifier = Modifier.size(44.dp))
+            Icon(
+                if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                if (playing) "Pausar" else "Tocar",
+                tint = Color.White,
+                modifier = Modifier.size(44.dp)
+            )
         }
         IconButton({ player?.seekToNextMediaItem() }, Modifier.size(56.dp)) {
             Icon(Icons.Default.SkipNext, "Próxima", tint = Color.White, modifier = Modifier.size(36.dp))
