@@ -23,13 +23,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -301,60 +299,28 @@ private fun TurntableArtwork(size: Dp, playing: Boolean) {
         }
     }
 
-    val painter = painterResource(R.drawable.juke_turntable)
-    val discSize = size * .72f
-    val discLeft = (size - discSize) / 2
-    val discTop = discLeft + size * .035f
-
     Box(Modifier.size(size).clip(RoundedCornerShape(22.dp))) {
         Image(
-            painter = painter,
+            painter = painterResource(R.drawable.juke_turntable_base),
             contentDescription = "Toca-discos JUKE",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
-        Box(
-            modifier = Modifier
-                .size(discSize)
-                .align(Alignment.Center)
-                .offset(y = size * .035f)
-                .clip(CircleShape)
-                .graphicsLayer { rotationZ = rotation.value }
-        ) {
-            Image(
-                painter = painter,
-                contentDescription = null,
-                modifier = Modifier.size(size).offset(x = -discLeft, y = -discTop),
-                contentScale = ContentScale.Fit
-            )
-        }
         Image(
-            painter = painter,
+            painter = painterResource(R.drawable.juke_turntable_vinyl),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize().clip(TurntableTonearmMask),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { rotationZ = rotation.value },
+            contentScale = ContentScale.Fit
+        )
+        Image(
+            painter = painterResource(R.drawable.juke_turntable_tonearm),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
     }
-}
-
-private val TurntableTonearmMask = GenericShape { shapeSize, _ ->
-    val width = shapeSize.width
-    val height = shapeSize.height
-    moveTo(.80f * width, .10f * height)
-    cubicTo(.89f * width, .10f * height, .93f * width, .15f * height, .93f * width, .23f * height)
-    lineTo(.88f * width, .29f * height)
-    cubicTo(.87f * width, .43f * height, .83f * width, .56f * height, .77f * width, .67f * height)
-    lineTo(.80f * width, .70f * height)
-    lineTo(.77f * width, .78f * height)
-    lineTo(.69f * width, .86f * height)
-    lineTo(.61f * width, .83f * height)
-    lineTo(.62f * width, .77f * height)
-    lineTo(.68f * width, .72f * height)
-    cubicTo(.73f * width, .64f * height, .76f * width, .54f * height, .77f * width, .42f * height)
-    lineTo(.78f * width, .30f * height)
-    cubicTo(.73f * width, .26f * height, .72f * width, .21f * height, .73f * width, .17f * height)
-    cubicTo(.74f * width, .12f * height, .76f * width, .10f * height, .80f * width, .10f * height)
-    close()
 }
 
 @Composable
