@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,8 +30,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -205,7 +205,7 @@ private fun VerticalBandSlider(
             onValueChange(verticalLevel(y, height, min, max))
         }
         Canvas(
-            Modifier.width(43.dp).height(218.dp)
+            Modifier.width(38.dp).height(212.dp)
                 .pointerInput(enabled, min, max) {
                     if (enabled) {
                         detectTapGestures { offset ->
@@ -227,10 +227,10 @@ private fun VerticalBandSlider(
             val fraction = (value.coerceIn(min, max) - min).toFloat() / (max - min).coerceAtLeast(1)
             val thumbY = bottom - ((bottom - top) * fraction)
             val centerX = size.width / 2f
-            drawLine(inactiveTrack, Offset(centerX, top), Offset(centerX, bottom), 7.dp.toPx(), StrokeCap.Round)
-            drawLine(activeTrack, Offset(centerX, bottom), Offset(centerX, thumbY), 7.dp.toPx(), StrokeCap.Round)
-            drawCircle(activeTrack, 14.dp.toPx(), Offset(centerX, thumbY))
-            drawCircle(onSurface, 10.dp.toPx(), Offset(centerX, thumbY))
+            drawLine(inactiveTrack, Offset(centerX, top), Offset(centerX, bottom), 5.dp.toPx(), StrokeCap.Round)
+            drawLine(activeTrack, Offset(centerX, bottom), Offset(centerX, thumbY), 5.dp.toPx(), StrokeCap.Round)
+            drawCircle(activeTrack.copy(alpha = 0.72f), 10.dp.toPx(), Offset(centerX, thumbY))
+            drawCircle(onSurface, 7.5.dp.toPx(), Offset(centerX, thumbY))
         }
         Text(label, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
         Text(description, color = TextMuted, fontSize = 10.sp, maxLines = 1)
@@ -267,20 +267,11 @@ private fun SubwooferSection(state: EqualizerUiState) {
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("0", color = TextMuted)
-                Slider(
+                SubwooferSlider(
                     value = (state.bassStrength / 10f).coerceIn(0f, 100f),
                     onValueChange = { EqualizerManager.setBassStrength((it * 10).toInt()) },
-                    valueRange = 0f..100f,
                     enabled = state.available && state.bassSupported && state.bassEnabled,
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.onSurface,
-                        activeTrackColor = PrimaryBlue,
-                        inactiveTrackColor = SurfaceRaised,
-                        disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                        disabledActiveTrackColor = PrimaryBlue.copy(alpha = 0.42f),
-                        disabledInactiveTrackColor = SurfaceRaised
-                    )
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                 )
                 Text("100", color = TextMuted)
             }
@@ -289,6 +280,55 @@ private fun SubwooferSection(state: EqualizerUiState) {
             }
         }
     }
+}
+
+@Composable
+private fun SubwooferSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val activeTrack = if (enabled) PrimaryBlue else PrimaryBlue.copy(alpha = 0.42f)
+    val inactiveTrack = if (enabled) SurfaceRaised else SurfaceRaised.copy(alpha = 0.58f)
+    val thumbColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f)
+    val thumbRadiusPx = with(LocalDensity.current) { 10.dp.toPx() }
+
+    Canvas(
+        modifier.height(38.dp)
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures { offset ->
+                        onValueChange(horizontalSliderValue(offset.x, size.width.toFloat(), thumbRadiusPx))
+                    }
+                }
+            }
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectHorizontalDragGestures { change, _ ->
+                        onValueChange(horizontalSliderValue(change.position.x, size.width.toFloat(), thumbRadiusPx))
+                        change.consume()
+                    }
+                }
+            }
+    ) {
+        val thumbRadius = 10.dp.toPx()
+        val start = thumbRadius
+        val end = size.width - thumbRadius
+        val centerY = size.height / 2f
+        val thumbX = start + ((end - start) * (value / 100f).coerceIn(0f, 1f))
+
+        drawLine(inactiveTrack, Offset(start, centerY), Offset(end, centerY), 5.dp.toPx(), StrokeCap.Round)
+        drawLine(activeTrack, Offset(start, centerY), Offset(thumbX, centerY), 5.dp.toPx(), StrokeCap.Round)
+        drawCircle(activeTrack.copy(alpha = 0.72f), thumbRadius, Offset(thumbX, centerY))
+        drawCircle(thumbColor, 7.5.dp.toPx(), Offset(thumbX, centerY))
+    }
+}
+
+private fun horizontalSliderValue(x: Float, width: Float, thumbRadius: Float): Float {
+    val start = thumbRadius
+    val end = (width - thumbRadius).coerceAtLeast(start + 1f)
+    return (((x - start) / (end - start)) * 100f).coerceIn(0f, 100f)
 }
 
 @Composable

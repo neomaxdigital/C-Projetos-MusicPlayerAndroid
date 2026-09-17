@@ -279,12 +279,17 @@ private fun NowPlayingArtwork(song: Song?, size: Dp) {
 
 @Composable
 private fun TurntableArtwork(size: Dp) {
-    Image(
-        painter = painterResource(R.drawable.juke_turntable_static),
-        contentDescription = "Toca-discos JUKE",
+    Box(
         modifier = Modifier.size(size).clip(RoundedCornerShape(22.dp)),
-        contentScale = ContentScale.Fit
-    )
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.juke_turntable_static),
+            contentDescription = "Toca-discos JUKE",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+    }
 }
 
 @Composable
