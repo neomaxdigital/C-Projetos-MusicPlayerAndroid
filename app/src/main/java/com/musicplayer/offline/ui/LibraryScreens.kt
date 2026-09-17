@@ -348,7 +348,11 @@ private fun SongsList(
     onAddToPlaylist: (Song) -> Unit
 ) {
     if (songs.isEmpty()) {
-        EmptyLibraryPage("Sua biblioteca está vazia", "Nenhuma música foi encontrada no dispositivo.", Icons.AutoMirrored.Filled.QueueMusic)
+        EmptyLibraryPage(
+            "Nenhuma faixa adicionada",
+            "Use o botão + para adicionar músicas ou pastas do seu celular.",
+            Icons.AutoMirrored.Filled.QueueMusic
+        )
         return
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 10.dp)) {

@@ -62,7 +62,6 @@ class UserLibraryRepository(context: Context) {
         val previousFavorites = favoriteIds()
         val previousRecents = recentIds()
         val previousPlayCounts = playCounts()
-        if (validIds.isEmpty()) return Triple(previousFavorites, previousRecents, previousPlayCounts)
         val favorites = LibraryIdRules.retainFavorites(previousFavorites, validIds)
         val recents = LibraryIdRules.retainRecents(previousRecents, validIds)
         val playCounts = LibraryIdRules.retainPlayCounts(previousPlayCounts, validIds)

@@ -55,7 +55,6 @@ class PlaylistRepository(context: Context) {
 
     fun retainOnly(validIds: Set<Long>): List<LocalPlaylist> {
         val current = playlists()
-        if (validIds.isEmpty()) return current
         val updated = current.map { PlaylistRules.retainSongs(it, validIds) }
         return if (updated == current) current else save(updated)
     }

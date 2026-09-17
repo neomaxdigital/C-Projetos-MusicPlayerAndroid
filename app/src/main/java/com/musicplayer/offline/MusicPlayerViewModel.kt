@@ -38,6 +38,9 @@ class MusicPlayerViewModel(
     private val playlistRepository: PlaylistRepository,
     private val settingsRepository: AppSettingsRepository
 ) : ViewModel() {
+    var introShown by mutableStateOf(false)
+        private set
+
     var state by mutableStateOf(
         LibraryUiState(
             favoriteIds = userLibrary.favoriteIds(),
@@ -62,6 +65,8 @@ class MusicPlayerViewModel(
             loadError = null
         )
     }
+
+    fun dismissIntro() { introShown = true }
 
     /** Adds a selected SAF document to the visible library before the background refresh ends. */
     fun addSongImmediately(song: Song): Boolean {

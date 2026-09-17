@@ -1,10 +1,7 @@
 package com.musicplayer.offline
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -63,9 +60,7 @@ import com.musicplayer.offline.data.AppSettingsRepository
 import com.musicplayer.offline.data.PlaybackSessionRepository
 import com.musicplayer.offline.data.PlaybackSnapshot
 import com.musicplayer.offline.conversion.AudioConversionManager
-import com.musicplayer.offline.music.MusicRepository
 import com.musicplayer.offline.music.AudioFileSupport
-import com.musicplayer.offline.music.LibrarySongMerge
 import com.musicplayer.offline.music.SafMusicRepository
 import com.musicplayer.offline.music.SafSongImportResult
 import com.musicplayer.offline.music.Song
@@ -97,6 +92,7 @@ import com.musicplayer.offline.ui.LibraryRoute
 import com.musicplayer.offline.ui.LibraryTab
 import com.musicplayer.offline.ui.LocalConversionRequest
 import com.musicplayer.offline.ui.JukeCircularLogo
+import com.musicplayer.offline.ui.JukeIntroScreen
 import com.musicplayer.offline.ui.MiniPlayer
 import com.musicplayer.offline.ui.MusicPlayerTheme
 import com.musicplayer.offline.ui.NowPlayingScreen
@@ -139,7 +135,6 @@ class MainActivity : ComponentActivity() {
 private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val state = viewModel.state
-    var granted by remember { mutableStateOf(hasAudioPermission(context)) }
     var player by remember { mutableStateOf<Player?>(null) }
     var currentSongId by remember { mutableStateOf<Long?>(null) }
     var position by remember { mutableLongStateOf(0L) }
@@ -162,7 +157,6 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     val sessionRepository = remember { PlaybackSessionRepository(context) }
     val safMusicRepository = remember(context) { SafMusicRepository(context) }
     val importScope = rememberCoroutineScope()
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let {
             safMusicRepository.addFolder(it)
@@ -190,21 +184,16 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
         }
     }
 
-    LaunchedEffect(granted, rescanRevision, state.settings.showUnknownFiles, state.settings.showShortSongs, state.settings.minimumDurationSeconds) {
-        if (granted) {
-            viewModel.beginLibraryLoad()
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    LibrarySongMerge.merge(
-                        MusicRepository(context).loadSongs(state.settings.showUnknownFiles),
-                        safMusicRepository.loadSongs()
-                    ).filter {
-                        state.settings.showShortSongs || it.duration >= state.settings.minimumDurationSeconds * 1_000L
-                    }
+    LaunchedEffect(rescanRevision, state.settings.showShortSongs, state.settings.minimumDurationSeconds) {
+        viewModel.beginLibraryLoad()
+        runCatching {
+            withContext(Dispatchers.IO) {
+                safMusicRepository.loadSongs().filter {
+                    state.settings.showShortSongs || it.duration >= state.settings.minimumDurationSeconds * 1_000L
                 }
-            }.onSuccess(viewModel::setSongs).onFailure {
-                viewModel.setLibraryError("Não foi possível ler a biblioteca. Verifique a permissão de músicas e tente novamente.")
             }
+        }.onSuccess(viewModel::setSongs).onFailure {
+            viewModel.setLibraryError("Não foi possível atualizar as músicas e pastas adicionadas.")
         }
     }
     DisposableEffect(context) {
@@ -325,7 +314,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
         Surface(Modifier.fillMaxSize(), color = AppBackground) {
             Box(Modifier.fillMaxSize()) {
               when {
-                !granted -> PermissionScreen { launcher.launch(audioPermission()) }
+                !viewModel.introShown -> JukeIntroScreen(viewModel::dismissIntro)
                 state.isLoading && state.songs.isEmpty() -> LibraryLoadingScreen()
                 state.loadError != null && state.songs.isEmpty() -> LibraryErrorScreen(state.loadError) { rescanRevision++ }
                 feature == FeatureRoute.EQUALIZER -> EqualizerScreen { feature = null }
@@ -406,7 +395,12 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                   },
                   onCancel = AudioConversionManager::cancel,
                   onDismissState = AudioConversionManager::dismiss,
-                  onCompleted = { rescanRevision++ }
+                  onCompleted = { uri ->
+                      importScope.launch {
+                          withContext(Dispatchers.IO) { safMusicRepository.addSong(uri) }
+                          rescanRevision++
+                      }
+                  }
               )
             }
         }
@@ -705,21 +699,6 @@ private fun HomeShell(
 }
 
 @Composable
-private fun PermissionScreen(request: () -> Unit) = Column(
-    Modifier.fillMaxSize().padding(32.dp),
-    Arrangement.Center,
-    Alignment.CenterHorizontally
-) {
-    JukeCircularLogo(Modifier.size(104.dp))
-    Spacer(Modifier.height(20.dp))
-    Text("Sua música, do seu jeito", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(10.dp))
-    Text("Permita o acesso aos áudios do dispositivo para começar a ouvir offline.", color = TextMuted)
-    Spacer(Modifier.height(24.dp))
-    Button(request) { Text("Permitir acesso") }
-}
-
-@Composable
 private fun LibraryLoadingScreen() = Column(
     Modifier.fillMaxSize().padding(32.dp),
     Arrangement.Center,
@@ -746,12 +725,6 @@ private fun LibraryErrorScreen(message: String, retry: () -> Unit) = Column(
     Spacer(Modifier.height(22.dp))
     Button(retry) { Text("Tentar novamente") }
 }
-
-private fun audioPermission(): String =
-    if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-
-private fun hasAudioPermission(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED
 
 private fun LibraryRoute.Folder.parentFolderRoute(): LibraryRoute {
     val parent = path.trim().trimEnd('/').substringBeforeLast('/', missingDelimiterValue = "")

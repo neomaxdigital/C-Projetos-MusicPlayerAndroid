@@ -72,8 +72,7 @@ fun SettingsScreen(settings: AppSettings, update: ((AppSettings) -> AppSettings)
                 { value -> update { it.copy(minimumDurationSeconds = value.toInt()) } },
                 valueRange = 0f..180f, enabled = !settings.showShortSongs
             )
-            SettingSwitch("Mostrar arquivos desconhecidos", "Inclui áudios que o MediaStore não marcou como música", settings.showUnknownFiles) { value -> update { it.copy(showUnknownFiles = value) } }
-            Button(rescan, Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh, null); Text(" Reescanear músicas") }
+            Button(rescan, Modifier.fillMaxWidth()) { Icon(Icons.Default.Refresh, null); Text(" Atualizar biblioteca") }
         }
         SectionLabel("INTERFACE")
         SettingsCard {

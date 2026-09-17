@@ -32,7 +32,7 @@ fun ConversionDialogs(
     onConfirm: (ConversionRequest) -> Unit,
     onCancel: () -> Unit,
     onDismissState: () -> Unit,
-    onCompleted: () -> Unit
+    onCompleted: (Uri) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -73,7 +73,7 @@ fun ConversionDialogs(
         )
         is ConversionState.Success -> {
             LaunchedEffect(state.uri) {
-                onCompleted()
+                onCompleted(state.uri)
                 if (state.shareAfter) shareAudioUri(context, state.uri, state.displayName, "audio/mpeg")
             }
             AlertDialog(
