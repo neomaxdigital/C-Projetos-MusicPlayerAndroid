@@ -338,6 +338,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                     openEqualizer = { feature = FeatureRoute.EQUALIZER },
                     openLyrics = { feature = FeatureRoute.LYRICS },
                     requestConversion = { song, shareAfter -> conversionRequest = ConversionRequest(song, shareAfter) },
+                    artworkSize = state.settings.artworkSize,
                     back = { nowPlaying = false }
                 )
                 else -> HomeShell(
