@@ -272,15 +272,20 @@ private fun SubwooferSection(state: EqualizerUiState) {
                 )
             }
             Spacer(Modifier.height(18.dp))
+            val bassPercent = (state.bassStrength / 10f).roundToInt().coerceIn(0, 100)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("0", color = TextMuted)
                 SubwooferSlider(
-                    value = (state.bassStrength / 10f).coerceIn(0f, 100f),
+                    value = bassPercent.toFloat(),
                     onValueChange = { EqualizerManager.setBassStrength((it * 10).toInt()) },
                     enabled = state.available && state.bassSupported && state.bassEnabled,
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                    modifier = Modifier.weight(1f).padding(end = 12.dp)
                 )
-                Text("100", color = TextMuted)
+                Text(
+                    bassPercent.toString(),
+                    color = TextMuted,
+                    modifier = Modifier.width(40.dp),
+                    textAlign = TextAlign.End
+                )
             }
             if (!state.bassSupported) {
                 Text("Reforço de graves indisponível para esta sessão de áudio.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
