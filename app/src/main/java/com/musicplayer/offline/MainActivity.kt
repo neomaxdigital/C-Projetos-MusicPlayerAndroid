@@ -153,6 +153,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
     var sessionRestored by remember { mutableStateOf(false) }
     var playbackMessage by remember { mutableStateOf<String?>(null) }
     var conversionRequest by remember { mutableStateOf<ConversionRequest?>(null) }
+    var nowPlayingPlaylistSong by remember { mutableStateOf<Song?>(null) }
     val conversionState by AudioConversionManager.state.collectAsStateWithLifecycle()
     val sessionRepository = remember { PlaybackSessionRepository(context) }
     val safMusicRepository = remember(context) { SafMusicRepository(context) }
@@ -335,6 +336,15 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                     favorite = currentSongId in state.favoriteIds,
                     toggleFavorite = { currentSongId?.let(viewModel::toggleFavorite) },
                     openQueue = { queueOpen = true },
+                    addToQueue = {
+                        currentSong?.let { song ->
+                            addToQueue(player, song)
+                            playbackMessage = "Adicionada à fila de reprodução"
+                        }
+                    },
+                    addToPlaylist = {
+                        currentSong?.let { nowPlayingPlaylistSong = it }
+                    },
                     openEqualizer = { feature = FeatureRoute.EQUALIZER },
                     openLyrics = { feature = FeatureRoute.LYRICS },
                     requestConversion = { song, shareAfter -> conversionRequest = ConversionRequest(song, shareAfter) },
@@ -402,6 +412,23 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                       }
                   }
               )
+              nowPlayingPlaylistSong?.let { song ->
+                  PlaylistPickerDialog(
+                      song = song,
+                      playlists = state.playlists,
+                      onDismiss = { nowPlayingPlaylistSong = null },
+                      onAdd = { playlistId ->
+                          viewModel.addSongToPlaylist(playlistId, song.id)
+                          nowPlayingPlaylistSong = null
+                          playbackMessage = "Adicionada à playlist"
+                      },
+                      onCreateAndAdd = { name ->
+                          viewModel.createPlaylistWithSong(name, song.id)
+                          nowPlayingPlaylistSong = null
+                          playbackMessage = "Playlist criada e música adicionada"
+                      }
+                  )
+              }
             }
         }
     }
