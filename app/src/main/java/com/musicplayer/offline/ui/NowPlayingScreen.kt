@@ -17,17 +17,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -115,6 +111,7 @@ fun NowPlayingScreen(
     Modifier
         .fillMaxSize()
         .statusBarsPadding()
+        .navigationBarsPadding()
 ) {
     val context = LocalContext.current
     val compact = maxHeight < 720.dp
@@ -211,115 +208,62 @@ fun NowPlayingScreen(
         }
 
         if (selectedTab == 0) {
-            Column(Modifier.fillMaxSize()) {
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = horizontalPadding),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
-                    NowPlayingArtwork(song = song, size = artSize)
-                    Spacer(Modifier.height(if (compact) 14.dp else 24.dp))
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = horizontalPadding),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
+                NowPlayingArtwork(song = song, size = artSize)
+                Spacer(Modifier.height(if (compact) 14.dp else 24.dp))
+                Text(
+                    title,
+                    modifier = Modifier.fillMaxWidth(),
+                    fontSize = if (compact) 24.sp else 28.sp,
+                    lineHeight = if (compact) 28.sp else 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (artist.isNotBlank()) {
                     Text(
-                        title,
-                        modifier = Modifier.fillMaxWidth(),
-                        fontSize = if (compact) 24.sp else 28.sp,
-                        lineHeight = if (compact) 28.sp else 32.sp,
-                        fontWeight = FontWeight.Bold,
+                        artist,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        color = TextMuted,
+                        fontSize = if (compact) 15.sp else 17.sp,
                         textAlign = TextAlign.Center,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (artist.isNotBlank()) {
-                        Text(
-                            artist,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            color = TextMuted,
-                            fontSize = if (compact) 15.sp else 17.sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        NowPlayingAction(
-                            if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            "Curtir",
-                            active = favorite,
-                            enabled = song != null || item != null,
-                            onClick = toggleFavorite
-                        )
-                        NowPlayingAction(Icons.Default.Tune, "Equalizador", onClick = openEqualizer)
-                        NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share)
-                        NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue)
-                    }
-                    Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
                 }
-
-                Column(Modifier.fillMaxWidth().padding(horizontal = horizontalPadding)) {
-                    NowPlayingBottomControls(
-                        player = player,
-                        position = position,
-                        duration = duration,
-                        playing = playing,
-                        shuffleEnabled = shuffleEnabled,
-                        repeatMode = repeatMode,
-                        compact = compact
+                Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    NowPlayingAction(
+                        if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        "Curtir",
+                        active = favorite,
+                        enabled = song != null || item != null,
+                        onClick = toggleFavorite
                     )
+                    NowPlayingAction(Icons.Default.Tune, "Equalizador", onClick = openEqualizer)
+                    NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share)
+                    NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue)
                 }
+                Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
+                PlaybackProgress(player, position, duration)
+                Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
+                PlaybackControls(player, playing, shuffleEnabled, repeatMode, if (compact) 70.dp else 84.dp)
+                Spacer(Modifier.height(18.dp))
             }
         } else {
             Column(Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
                 Box(Modifier.weight(1f).fillMaxWidth()) { LyricsContent(song, position) }
-                NowPlayingBottomControls(
-                    player = player,
-                    position = position,
-                    duration = duration,
-                    playing = playing,
-                    shuffleEnabled = shuffleEnabled,
-                    repeatMode = repeatMode,
-                    compact = compact,
-                    lyricsTab = true
-                )
+                PlaybackProgress(player, position, duration)
+                Spacer(Modifier.height(8.dp))
+                PlaybackControls(player, playing, shuffleEnabled, repeatMode, if (compact) 66.dp else 76.dp)
+                Spacer(Modifier.height(12.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun NowPlayingBottomControls(
-    player: Player?,
-    position: Long,
-    duration: Long,
-    playing: Boolean,
-    shuffleEnabled: Boolean,
-    repeatMode: Int,
-    compact: Boolean,
-    lyricsTab: Boolean = false
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-            .padding(bottom = 6.dp)
-    ) {
-        PlaybackProgress(player, position, duration)
-        Spacer(Modifier.height(if (lyricsTab) 8.dp else if (compact) 8.dp else 18.dp))
-        PlaybackControls(
-            player,
-            playing,
-            shuffleEnabled,
-            repeatMode,
-            if (lyricsTab) {
-                if (compact) 66.dp else 76.dp
-            } else {
-                if (compact) 70.dp else 84.dp
-            }
-        )
     }
 }
 
