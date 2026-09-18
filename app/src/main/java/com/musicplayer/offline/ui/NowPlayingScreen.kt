@@ -283,7 +283,7 @@ fun NowPlayingScreen(
                 Box(Modifier.weight(1f).fillMaxWidth()) { LyricsContent(song, position) }
                 PlaybackProgress(player, position, duration)
                 Spacer(Modifier.height(8.dp))
-                PlaybackControls(player, playing, shuffleEnabled, repeatMode, adaptiveDp(64.dp, 76.dp, heightFraction))
+                PlaybackControls(player, playing, shuffleEnabled, repeatMode, adaptiveDp(64.dp, 76.dp, fitFraction))
                 Spacer(Modifier.height(12.dp))
             }
         }
