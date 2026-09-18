@@ -3,6 +3,7 @@ package com.musicplayer.offline.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,7 +41,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun LyricsScreen(song: Song?, positionMs: Long, animationsEnabled: Boolean = true, back: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         FeatureTopBar("Letras", back)
         LyricsContent(song, positionMs, animationsEnabled)
     }

@@ -7,6 +7,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes as PlatformAudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -31,6 +33,7 @@ class AlarmPlaybackService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var volumeRamp: Runnable? = null
     private var vibrator: Vibrator? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -39,7 +42,7 @@ class AlarmPlaybackService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> intent.getStringExtra(EXTRA_ALARM_ID)?.let(::startAlarm)
+            ACTION_START -> intent.getStringExtra(EXTRA_ALARM_ID)?.let { startAlarm(it) }
             ACTION_SNOOZE -> snoozeCurrentAlarm()
             ACTION_STOP -> stopAlarm()
         }
@@ -49,12 +52,13 @@ class AlarmPlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        currentAlarmId = null
         releasePlayer()
         stopVibration()
         super.onDestroy()
     }
 
-    private fun startAlarm(alarmId: String) {
+    private fun startAlarm(alarmId: String, focusAttempt: Int = 0) {
         val alarm = MusicAlarmRepository(this).find(alarmId)
         if (alarm == null || alarm.tracks.isEmpty()) {
             stopSelf()
@@ -64,6 +68,34 @@ class AlarmPlaybackService : Service() {
         currentAlarmId = alarmId
         currentSnoozeMinutes = alarm.snoozeMinutes
         startForeground(NOTIFICATION_ID, buildNotification(alarm))
+        releasePlayer()
+        stopVibration()
+        val audioManager = getSystemService(AudioManager::class.java)
+        val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(
+                PlatformAudioAttributes.Builder()
+                    .setUsage(PlatformAudioAttributes.USAGE_ALARM)
+                    .setContentType(PlatformAudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setOnAudioFocusChangeListener({ change ->
+                when (change) {
+                    AudioManager.AUDIOFOCUS_LOSS -> stopAlarm()
+                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> player?.pause()
+                    AudioManager.AUDIOFOCUS_GAIN -> player?.play()
+                }
+            }, handler)
+            .build()
+        audioFocusRequest = focusRequest
+        if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            // Retry briefly after foreground promotion; never play without granted focus.
+            if (focusAttempt < 10) {
+                handler.postDelayed({
+                    if (currentAlarmId == alarmId) startAlarm(alarmId, focusAttempt + 1)
+                }, 200)
+            } else stopAlarm()
+            return
+        }
 
         val activePlayer = player ?: ExoPlayer.Builder(this)
             .setAudioAttributes(
@@ -71,7 +103,8 @@ class AlarmPlaybackService : Service() {
                     .setUsage(C.USAGE_ALARM)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .build(),
-                true
+                // Media3 automatic focus does not support USAGE_ALARM.
+                false
             )
             .build()
             .also { exo ->
@@ -109,14 +142,13 @@ class AlarmPlaybackService : Service() {
 
     private fun startVolumeRamp(activePlayer: ExoPlayer, targetVolume: Float) {
         volumeRamp?.let(handler::removeCallbacks)
-        activePlayer.volume = minOf(0.08f, targetVolume)
+        activePlayer.volume = alarmRampVolume(targetVolume, 0)
         var step = 0
         val totalSteps = 15
         val runnable = object : Runnable {
             override fun run() {
                 step++
-                val fraction = (step.toFloat() / totalSteps).coerceIn(0f, 1f)
-                activePlayer.volume = (targetVolume * fraction).coerceIn(0f, targetVolume)
+                activePlayer.volume = alarmRampVolume(targetVolume, step, totalSteps)
                 if (step < totalSteps) handler.postDelayed(this, 2_000)
             }
         }
@@ -144,6 +176,10 @@ class AlarmPlaybackService : Service() {
         volumeRamp = null
         player?.release()
         player = null
+        audioFocusRequest?.let {
+            getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it)
+        }
+        audioFocusRequest = null
     }
 
     private fun startVibration() {

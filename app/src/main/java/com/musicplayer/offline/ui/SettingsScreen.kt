@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -45,7 +46,7 @@ import com.musicplayer.offline.data.ThemeMode
 fun SettingsScreen(settings: AppSettings, update: ((AppSettings) -> AppSettings) -> Unit, rescan: () -> Unit, back: () -> Unit) {
     val context = LocalContext.current
     val versionName = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "1.0"
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
         FeatureTopBar("Configurações", back)
         SectionLabel("APARÊNCIA")
         SettingsCard {

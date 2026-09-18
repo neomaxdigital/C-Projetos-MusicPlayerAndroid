@@ -54,13 +54,17 @@ class MusicPlayerViewModel(
 
     fun setSongs(songs: List<Song>) {
         val validIds = songs.mapTo(hashSetOf()) { it.id }
-        val (favorites, recents, playCounts) = userLibrary.retainOnly(validIds)
+        // A filtered or temporarily inaccessible source is not a user deletion.
+        // Keep saved associations so they return when the source becomes visible again.
+        val favorites = userLibrary.favoriteIds().filterTo(hashSetOf()) { it in validIds }
+        val recents = userLibrary.recentIds().filter { it in validIds }
+        val playCounts = userLibrary.playCounts().filterKeys { it in validIds }
         state = state.copy(
             songs = songs,
             favoriteIds = favorites,
             recentIds = recents,
             playCounts = playCounts,
-            playlists = playlistRepository.retainOnly(validIds),
+            playlists = playlistRepository.playlists(),
             isLoading = false,
             loadError = null
         )

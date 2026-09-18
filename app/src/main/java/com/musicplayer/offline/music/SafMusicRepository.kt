@@ -30,14 +30,14 @@ class SafMusicRepository(context: Context) {
         SafSongImportResult.Imported(song, rememberUri(SONG_URIS_KEY, uri))
     }.getOrDefault(SafSongImportResult.Failed)
 
-    fun loadSongs(): List<Song> = buildList {
+    fun loadSongs(): List<Song> = LibrarySongMerge.merge(emptyList(), buildList {
         folderUris().forEach { treeUri ->
             runCatching { loadTree(treeUri) }.getOrDefault(emptyList()).forEach(::add)
         }
         songUris().forEach { uri ->
             runCatching { songFromUri(uri, INDIVIDUAL_SONGS_PATH) }.getOrNull()?.let(::add)
         }
-    }
+    })
 
     private fun rememberUri(key: String, uri: Uri): Boolean {
         takeReadPermissionIfAvailable(uri)
@@ -79,7 +79,7 @@ class SafMusicRepository(context: Context) {
                     val displayName = cursor.getString(nameIndex).orEmpty()
                     val mimeType = cursor.getString(mimeIndex).orEmpty()
                     if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
-                        addAll(loadChildren(treeUri, documentId, relativePath))
+                        addAll(loadChildren(treeUri, documentId, "$relativePath/$displayName"))
                     } else {
                         val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
                         songFromUri(
@@ -117,6 +117,7 @@ class SafMusicRepository(context: Context) {
             uri = uri,
             artwork = null,
             album = AudioFileSupport.album(metadata.album),
+            genre = metadata.genre?.takeIf(String::isNotBlank) ?: UNKNOWN_GENRE,
             duration = duration,
             dateAdded = ((knownModifiedMs ?: document.modifiedMs) / 1_000L).coerceAtLeast(0L),
             relativePath = relativePath,
@@ -150,6 +151,7 @@ class SafMusicRepository(context: Context) {
                 title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
                 artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
                 album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
+                genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE),
                 durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
             )
         }
@@ -162,7 +164,7 @@ class SafMusicRepository(context: Context) {
         .takeIf { it >= 0 }?.let(::getLong) ?: 0L
 
     private data class DocumentInfo(val name: String = "", val size: Long = 0L, val modifiedMs: Long = 0L)
-    private data class Metadata(val title: String? = null, val artist: String? = null, val album: String? = null, val durationMs: Long = 0L)
+    private data class Metadata(val title: String? = null, val artist: String? = null, val album: String? = null, val genre: String? = null, val durationMs: Long = 0L)
 
     private companion object {
         const val PREFERENCES_NAME = "saf_music_library"

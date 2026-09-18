@@ -7,6 +7,13 @@ import java.util.UUID
 
 enum class AlarmSourceType { SONG, PLAYLIST }
 
+internal fun alarmRampVolume(targetVolume: Float, step: Int, totalSteps: Int = 15): Float {
+    val target = targetVolume.coerceIn(0f, 1f)
+    val initial = minOf(0.08f, target)
+    val fraction = (step.toFloat() / totalSteps.coerceAtLeast(1)).coerceIn(0f, 1f)
+    return initial + (target - initial) * fraction
+}
+
 data class AlarmTrack(
     val id: Long,
     val uri: String,
@@ -52,7 +59,7 @@ object AlarmDayLabels {
     }
 }
 
-private object MusicAlarmCodec {
+internal object MusicAlarmCodec {
     fun encode(alarms: List<MusicAlarm>): String = alarms.joinToString("\n") { alarm ->
         listOf(
             alarm.id,

@@ -5,6 +5,7 @@ package com.musicplayer.offline.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,7 +49,7 @@ fun SleepTimerScreen(back: () -> Unit) {
     val timer by SleepTimerManager.state.collectAsState()
     var fade by remember(timer.fadeEnabled) { mutableStateOf(timer.fadeEnabled) }
     var customOpen by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
         FeatureTopBar("Timer para dormir", back)
         Card(
             Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = SurfaceDark),
