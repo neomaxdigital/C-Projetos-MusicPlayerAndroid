@@ -390,9 +390,22 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                 )
               }
               playbackMessage?.let { message ->
+                  val isPlaylistConfirmation =
+                      message == "Adicionado à playlist" ||
+                          message == "Playlist criada e música adicionada"
+
+                  if (isPlaylistConfirmation) {
+                      LaunchedEffect(message) {
+                          delay(1_800)
+                          if (playbackMessage == message) playbackMessage = null
+                      }
+                  }
+
                   Snackbar(
                       modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 110.dp),
-                      action = { TextButton({ playbackMessage = null }) { Text("Fechar") } }
+                      action = if (isPlaylistConfirmation) null else {
+                          { TextButton({ playbackMessage = null }) { Text("Fechar") } }
+                      }
                   ) { Text(message) }
               }
               ConversionDialogs(
@@ -420,7 +433,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                       onAdd = { playlistId ->
                           viewModel.addSongToPlaylist(playlistId, song.id)
                           nowPlayingPlaylistSong = null
-                          playbackMessage = "Adicionada à playlist"
+                          playbackMessage = "Adicionado à playlist"
                       },
                       onCreateAndAdd = { name ->
                           viewModel.createPlaylistWithSong(name, song.id)
