@@ -5,8 +5,11 @@ import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,8 +54,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -386,10 +392,10 @@ private fun AlarmEditorDialog(
                 }
 
                 Text("Volume máximo: " + volume.toInt() + "%", fontSize = 12.sp)
-                Slider(
+                AlarmVolumeSlider(
                     value = volume,
                     onValueChange = { volume = it },
-                    valueRange = 10f..100f
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -520,6 +526,89 @@ private fun SourcePickerDialog(
         confirmButton = {},
         dismissButton = { TextButton(onDismiss) { Text("Cancelar") } }
     )
+}
+
+@Composable
+private fun AlarmVolumeSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val activeTrack = PrimaryBlue
+    val inactiveTrack = SurfaceRaised
+    val thumbColor = MaterialTheme.colorScheme.onSurface
+    val thumbRadiusPx = with(LocalDensity.current) { 10.dp.toPx() }
+
+    Canvas(
+        modifier
+            .height(38.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    onValueChange(
+                        alarmVolumeFromPosition(
+                            x = offset.x,
+                            width = size.width.toFloat(),
+                            thumbRadius = thumbRadiusPx
+                        )
+                    )
+                }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, _ ->
+                    onValueChange(
+                        alarmVolumeFromPosition(
+                            x = change.position.x,
+                            width = size.width.toFloat(),
+                            thumbRadius = thumbRadiusPx
+                        )
+                    )
+                    change.consume()
+                }
+            }
+    ) {
+        val thumbRadius = 10.dp.toPx()
+        val start = thumbRadius
+        val end = size.width - thumbRadius
+        val centerY = size.height / 2f
+        val normalized = ((value.coerceIn(10f, 100f) - 10f) / 90f).coerceIn(0f, 1f)
+        val thumbX = start + ((end - start) * normalized)
+
+        drawLine(
+            color = inactiveTrack,
+            start = Offset(start, centerY),
+            end = Offset(end, centerY),
+            strokeWidth = 5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = activeTrack,
+            start = Offset(start, centerY),
+            end = Offset(thumbX, centerY),
+            strokeWidth = 5.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawCircle(
+            color = activeTrack.copy(alpha = 0.72f),
+            radius = thumbRadius,
+            center = Offset(thumbX, centerY)
+        )
+        drawCircle(
+            color = thumbColor,
+            radius = 7.5.dp.toPx(),
+            center = Offset(thumbX, centerY)
+        )
+    }
+}
+
+private fun alarmVolumeFromPosition(
+    x: Float,
+    width: Float,
+    thumbRadius: Float
+): Float {
+    val start = thumbRadius
+    val end = (width - thumbRadius).coerceAtLeast(start + 1f)
+    val fraction = ((x - start) / (end - start)).coerceIn(0f, 1f)
+    return 10f + (90f * fraction)
 }
 
 private fun Song.toAlarmTrack(): AlarmTrack = AlarmTrack(
