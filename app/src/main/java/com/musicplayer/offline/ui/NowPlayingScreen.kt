@@ -126,6 +126,7 @@ fun NowPlayingScreen(
     val controlsGap = adaptiveDp(4.dp, 12.dp, fitFraction)
     val playButtonSize = adaptiveDp(62.dp, 82.dp, fitFraction)
     val bottomGap = adaptiveDp(2.dp, 8.dp, fitFraction)
+    val actionLabelSizeSp = if (maxWidth < 380.dp) 9f else 11f
 
     // Reserve the worst-case height for text/actions/progress/controls, then let
     // artwork consume only the remaining safe height.
@@ -261,11 +262,12 @@ fun NowPlayingScreen(
                         "Curtir",
                         active = favorite,
                         enabled = song != null || item != null,
-                        onClick = toggleFavorite
+                        onClick = toggleFavorite,
+                        labelFontSizeSp = actionLabelSizeSp
                     )
-                    NowPlayingAction(Icons.Default.Tune, "Equalizador", onClick = openEqualizer)
-                    NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share)
-                    NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue)
+                    NowPlayingAction(Icons.Default.Tune, "Equalizador", onClick = openEqualizer, labelFontSizeSp = actionLabelSizeSp)
+                    NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share, labelFontSizeSp = actionLabelSizeSp)
+                    NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue, labelFontSizeSp = actionLabelSizeSp)
                 }
                 Spacer(Modifier.height(actionsGap))
                 PlaybackProgress(player, position, duration)
@@ -342,7 +344,8 @@ private fun RowScope.NowPlayingAction(
     label: String,
     active: Boolean = false,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    labelFontSizeSp: Float = 11f
 ) {
     val iconColor = when {
         !enabled -> TextMuted.copy(alpha = .40f)
@@ -358,8 +361,10 @@ private fun RowScope.NowPlayingAction(
         Icon(icon, label, tint = iconColor, modifier = Modifier.size(30.dp))
         Text(
             label,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
             color = labelColor,
-            fontSize = 11.sp,
+            fontSize = labelFontSizeSp.sp,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
