@@ -73,7 +73,7 @@ fun QueueScreen(player: Player?, songs: List<Song>, revision: Int, onBack: () ->
                 val id = player.getMediaItemAt(index).mediaId.toLongOrNull()
                 songsById[id]?.let { song ->
                     QueueEntry(
-                        stableKey = "queue_\${index}_\${song.id}",
+                        stableKey = "queue_${index}_${song.id}",
                         song = song,
                         current = index == currentIndex
                     )
