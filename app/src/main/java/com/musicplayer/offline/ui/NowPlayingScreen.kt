@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -106,10 +108,28 @@ fun NowPlayingScreen(
     back: () -> Unit
 ) = BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
     val context = LocalContext.current
-    val compact = maxHeight < 720.dp
+    val density = LocalDensity.current
+    val navigationBarInset = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val horizontalPadding = if (maxWidth < 360.dp) 14.dp else 22.dp
-    val artSize = minOf(maxWidth - horizontalPadding * 2, maxHeight * if (compact) .30f else .38f)
-        .coerceIn(if (compact) 150.dp else 190.dp, 420.dp)
+    val usableHeight = (maxHeight - 64.dp - navigationBarInset).coerceAtLeast(420.dp)
+    val heightFraction = ((usableHeight.value - 500f) / 300f).coerceIn(0f, 1f)
+    val compact = usableHeight < 620.dp
+
+    // Responsive metrics: preserve the current visual hierarchy, but scale the elements
+    // that consume vertical space so playback controls stay above the system bar on
+    // short phones and still look balanced on tall phones.
+    val artMaxByWidth = (maxWidth - horizontalPadding * 2).coerceAtLeast(150.dp)
+    val artTarget = adaptiveDp(170.dp, 340.dp, heightFraction)
+    val artSize = minOf(artMaxByWidth, artTarget, 420.dp)
+    val topGap = adaptiveDp(6.dp, 18.dp, heightFraction)
+    val artworkTextGap = adaptiveDp(12.dp, 24.dp, heightFraction)
+    val titleSize = adaptiveSp(22f, 28f, heightFraction)
+    val titleLineHeight = adaptiveSp(26f, 32f, heightFraction)
+    val artistSize = adaptiveSp(14f, 17f, heightFraction)
+    val actionsGap = adaptiveDp(10.dp, 22.dp, heightFraction)
+    val controlsGap = adaptiveDp(8.dp, 18.dp, heightFraction)
+    val playButtonSize = adaptiveDp(68.dp, 84.dp, heightFraction)
+    val bottomGap = adaptiveDp(6.dp, 14.dp, heightFraction)
     var selectedTab by remember { mutableIntStateOf(0) }
     var menuOpen by remember { mutableStateOf(false) }
     val item = player?.currentMediaItem
@@ -188,17 +208,21 @@ fun NowPlayingScreen(
 
         if (selectedTab == 0) {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = horizontalPadding),
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = horizontalPadding)
+                    .padding(bottom = navigationBarInset),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
+                Spacer(Modifier.height(topGap))
                 NowPlayingArtwork(song = song, size = artSize)
-                Spacer(Modifier.height(if (compact) 14.dp else 24.dp))
+                Spacer(Modifier.height(artworkTextGap))
                 Text(
                     title,
                     modifier = Modifier.fillMaxWidth(),
-                    fontSize = if (compact) 24.sp else 28.sp,
-                    lineHeight = if (compact) 28.sp else 32.sp,
+                    fontSize = titleSize,
+                    lineHeight = titleLineHeight,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
@@ -209,13 +233,13 @@ fun NowPlayingScreen(
                         artist,
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         color = TextMuted,
-                        fontSize = if (compact) 15.sp else 17.sp,
+                        fontSize = artistSize,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
+                Spacer(Modifier.height(actionsGap))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     NowPlayingAction(
                         if (favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -228,18 +252,23 @@ fun NowPlayingScreen(
                     NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share)
                     NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue)
                 }
-                Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
+                Spacer(Modifier.height(actionsGap))
                 PlaybackProgress(player, position, duration)
-                Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
-                PlaybackControls(player, playing, shuffleEnabled, repeatMode, if (compact) 70.dp else 84.dp)
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(controlsGap))
+                PlaybackControls(player, playing, shuffleEnabled, repeatMode, playButtonSize)
+                Spacer(Modifier.height(bottomGap))
             }
         } else {
-            Column(Modifier.fillMaxSize().padding(horizontal = horizontalPadding)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = horizontalPadding)
+                    .padding(bottom = navigationBarInset)
+            ) {
                 Box(Modifier.weight(1f).fillMaxWidth()) { LyricsContent(song, position) }
                 PlaybackProgress(player, position, duration)
                 Spacer(Modifier.height(8.dp))
-                PlaybackControls(player, playing, shuffleEnabled, repeatMode, if (compact) 66.dp else 76.dp)
+                PlaybackControls(player, playing, shuffleEnabled, repeatMode, adaptiveDp(64.dp, 76.dp, heightFraction))
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -423,6 +452,12 @@ private fun PlaybackControls(player: Player?, playing: Boolean, shuffleEnabled: 
         }
     }
 }
+
+private fun adaptiveDp(min: Dp, max: Dp, fraction: Float): Dp =
+    min + (max - min) * fraction.coerceIn(0f, 1f)
+
+private fun adaptiveSp(min: Float, max: Float, fraction: Float) =
+    (min + (max - min) * fraction.coerceIn(0f, 1f)).sp
 
 private fun shareAudio(context: Context, song: Song) {
     runCatching {
