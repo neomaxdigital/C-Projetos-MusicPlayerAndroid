@@ -83,7 +83,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import com.musicplayer.offline.R
-import com.musicplayer.offline.data.ArtworkSize
 import com.musicplayer.offline.music.AudioFileSupport
 import com.musicplayer.offline.music.Song
 import kotlinx.coroutines.Dispatchers
@@ -104,31 +103,13 @@ fun NowPlayingScreen(
     openEqualizer: () -> Unit = {},
     openLyrics: () -> Unit = {},
     requestConversion: (Song, Boolean) -> Unit = { _, _ -> },
-    artworkSize: ArtworkSize = ArtworkSize.LARGE,
     back: () -> Unit
-) = BoxWithConstraints(
-    Modifier
-        .fillMaxSize()
-        .statusBarsPadding()
-) {
+) = BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
     val context = LocalContext.current
     val compact = maxHeight < 720.dp
     val horizontalPadding = if (maxWidth < 360.dp) 14.dp else 22.dp
-    val availableArtWidth = (maxWidth - horizontalPadding * 2).coerceAtLeast(0.dp)
-    // The music page scrolls, so reserve enough vertical room for the three selected artwork
-    // sizes instead of collapsing them to the same value on shorter phone windows.
-    val availableArtHeight = maxHeight * .70f
-    val maximumArtSize = minOf(availableArtWidth, availableArtHeight, 420.dp)
-    val preferredMinimum = if (compact) 120.dp else 150.dp
-    val artworkRatio = when (artworkSize) {
-        ArtworkSize.SMALL -> .62f
-        ArtworkSize.MEDIUM -> .76f
-        ArtworkSize.LARGE -> .90f
-    }
-    val artSize = (availableArtWidth * artworkRatio).coerceIn(
-        minimumValue = minOf(preferredMinimum, maximumArtSize),
-        maximumValue = maximumArtSize
-    )
+    val artSize = minOf(maxWidth - horizontalPadding * 2, maxHeight * if (compact) .30f else .38f)
+        .coerceIn(if (compact) 150.dp else 190.dp, 420.dp)
     var selectedTab by remember { mutableIntStateOf(0) }
     var menuOpen by remember { mutableStateOf(false) }
     val item = player?.currentMediaItem
