@@ -79,7 +79,12 @@ fun AlarmScreen(
     val repository = remember(context) { MusicAlarmRepository(context) }
     var alarms by remember { mutableStateOf(repository.alarms()) }
     var editing by remember { mutableStateOf<MusicAlarm?>(null) }
-    val exactAllowed = AlarmScheduler.canScheduleExact(context)
+    var exactAllowed by remember { mutableStateOf(AlarmScheduler.canScheduleExact(context)) }
+    val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        exactAllowed = AlarmScheduler.canScheduleExact(context)
+    }
     var notificationsAllowed by remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < 33 ||
@@ -113,7 +118,7 @@ fun AlarmScreen(
                     Spacer(Modifier.height(8.dp))
                     TextButton(
                         onClick = {
-                            AlarmScheduler.exactAlarmSettingsIntent(context)?.let(context::startActivity)
+                            AlarmScheduler.exactAlarmSettingsIntent(context)?.let(exactAlarmSettingsLauncher::launch)
                         }
                     ) { Text("Permitir alarmes exatos") }
                 }
@@ -356,13 +361,13 @@ private fun AlarmEditorDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = sourceType == AlarmSourceType.SONG,
-                        onClick = { sourceType = AlarmSourceType.SONG; pickingSource = AlarmSourceType.SONG },
+                        onClick = { pickingSource = AlarmSourceType.SONG },
                         label = { Text("Música") },
                         leadingIcon = { Icon(Icons.Default.MusicNote, null) }
                     )
                     FilterChip(
                         selected = sourceType == AlarmSourceType.PLAYLIST,
-                        onClick = { sourceType = AlarmSourceType.PLAYLIST; pickingSource = AlarmSourceType.PLAYLIST },
+                        onClick = { pickingSource = AlarmSourceType.PLAYLIST },
                         label = { Text("Playlist") },
                         leadingIcon = { Icon(Icons.Default.PlaylistPlay, null) }
                     )
