@@ -219,9 +219,30 @@ fun NowPlayingScreen(
                         onClick = { menuOpen = false; openEqualizer() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Fila") },
+                        text = { Text("Adicionar à playlist") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) },
+                        enabled = song != null,
+                        onClick = {
+                            menuOpen = false
+                            addToPlaylist()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Adicionar à fila de reprodução") },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) },
-                        onClick = { menuOpen = false; openQueue() }
+                        enabled = song != null,
+                        onClick = {
+                            menuOpen = false
+                            addToQueue()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Ver fila de reprodução") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) },
+                        onClick = {
+                            menuOpen = false
+                            openQueue()
+                        }
                     )
                 }
             }
