@@ -86,11 +86,30 @@ fun AlarmScreen(
     val repository = remember(context) { MusicAlarmRepository(context) }
     var alarms by remember { mutableStateOf(repository.alarms()) }
     var editing by remember { mutableStateOf<MusicAlarm?>(null) }
+    var pendingEnableAlarmId by remember { mutableStateOf<String?>(null) }
     var exactAllowed by remember { mutableStateOf(AlarmScheduler.canScheduleExact(context)) }
     val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         exactAllowed = AlarmScheduler.canScheduleExact(context)
+
+        val pendingId = pendingEnableAlarmId
+        pendingEnableAlarmId = null
+
+        if (pendingId != null && exactAllowed) {
+            repository.find(pendingId)?.let { alarm ->
+                val enabledAlarm = alarm.copy(enabled = true)
+                alarms = repository.upsert(enabledAlarm)
+                AlarmScheduler.schedule(context, enabledAlarm)
+                Toast.makeText(context, "Despertador ativado", Toast.LENGTH_SHORT).show()
+            }
+        } else if (pendingId != null && !exactAllowed) {
+            Toast.makeText(
+                context,
+                "Permita alarmes exatos para ativar o despertador.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
     var notificationsAllowed by remember {
         mutableStateOf(
@@ -197,18 +216,41 @@ fun AlarmScreen(
                         alarm = alarm,
                         onOpen = { editing = alarm },
                         onToggle = { enabled ->
-                            if (enabled && (alarm.tracks.isEmpty() || !AlarmScheduler.canScheduleExact(context))) {
-                                Toast.makeText(
-                                    context,
-                                    if (alarm.tracks.isEmpty()) "Escolha uma música ou playlist primeiro."
-                                    else "Permita alarmes exatos para ativar.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                val updated = alarm.copy(enabled = enabled)
-                                alarms = repository.upsert(updated)
-                                if (enabled) AlarmScheduler.schedule(context, updated)
-                                else AlarmScheduler.cancel(context, alarm.id)
+                            when {
+                                !enabled -> {
+                                    val updated = alarm.copy(enabled = false)
+                                    alarms = repository.upsert(updated)
+                                    AlarmScheduler.cancel(context, alarm.id)
+                                }
+
+                                alarm.tracks.isEmpty() -> {
+                                    Toast.makeText(
+                                        context,
+                                        "Escolha uma música ou playlist primeiro.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                !AlarmScheduler.canScheduleExact(context) -> {
+                                    pendingEnableAlarmId = alarm.id
+                                    val settingsIntent = AlarmScheduler.exactAlarmSettingsIntent(context)
+                                    if (settingsIntent != null) {
+                                        exactAlarmSettingsLauncher.launch(settingsIntent)
+                                    } else {
+                                        pendingEnableAlarmId = null
+                                        Toast.makeText(
+                                            context,
+                                            "Não foi possível abrir a permissão de alarmes exatos.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+
+                                else -> {
+                                    val updated = alarm.copy(enabled = true)
+                                    alarms = repository.upsert(updated)
+                                    AlarmScheduler.schedule(context, updated)
+                                }
                             }
                         },
                         onDelete = {
