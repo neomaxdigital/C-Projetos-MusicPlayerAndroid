@@ -25,10 +25,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Favorite
@@ -111,25 +109,43 @@ fun NowPlayingScreen(
     val density = LocalDensity.current
     val navigationBarInset = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val horizontalPadding = if (maxWidth < 360.dp) 14.dp else 22.dp
-    val usableHeight = (maxHeight - 64.dp - navigationBarInset).coerceAtLeast(420.dp)
-    val heightFraction = ((usableHeight.value - 500f) / 300f).coerceIn(0f, 1f)
-    val compact = usableHeight < 620.dp
+    val screenFraction = ((maxHeight.value - 560f) / 300f).coerceIn(0f, 1f)
+    val topBarHeight = adaptiveDp(54.dp, 64.dp, screenFraction)
+    val usableHeight = (maxHeight - topBarHeight - navigationBarInset).coerceAtLeast(360.dp)
 
-    // Responsive metrics: preserve the current visual hierarchy, but scale the elements
-    // that consume vertical space so playback controls stay above the system bar on
-    // short phones and still look balanced on tall phones.
-    val artMaxByWidth = (maxWidth - horizontalPadding * 2).coerceAtLeast(150.dp)
-    val artTarget = adaptiveDp(170.dp, 340.dp, heightFraction)
-    val artSize = minOf(artMaxByWidth, artTarget, 420.dp)
-    val topGap = adaptiveDp(6.dp, 18.dp, heightFraction)
-    val artworkTextGap = adaptiveDp(12.dp, 24.dp, heightFraction)
-    val titleSize = adaptiveSp(22f, 28f, heightFraction)
-    val titleLineHeight = adaptiveSp(26f, 32f, heightFraction)
-    val artistSize = adaptiveSp(14f, 17f, heightFraction)
-    val actionsGap = adaptiveDp(10.dp, 22.dp, heightFraction)
-    val controlsGap = adaptiveDp(8.dp, 18.dp, heightFraction)
-    val playButtonSize = adaptiveDp(68.dp, 84.dp, heightFraction)
-    val bottomGap = adaptiveDp(6.dp, 14.dp, heightFraction)
+    // Fit the entire Music tab inside the safe area with no page scrolling.
+    // Short phones shrink artwork and vertical spacing first; tall phones keep
+    // the larger original proportions.
+    val fitFraction = ((usableHeight.value - 430f) / 300f).coerceIn(0f, 1f)
+    val topGap = adaptiveDp(4.dp, 14.dp, fitFraction)
+    val artworkTextGap = adaptiveDp(8.dp, 18.dp, fitFraction)
+    val titleSize = adaptiveSp(19f, 28f, fitFraction)
+    val titleLineHeight = adaptiveSp(22f, 32f, fitFraction)
+    val artistSize = adaptiveSp(13f, 17f, fitFraction)
+    val actionsGap = adaptiveDp(5.dp, 16.dp, fitFraction)
+    val controlsGap = adaptiveDp(4.dp, 12.dp, fitFraction)
+    val playButtonSize = adaptiveDp(62.dp, 82.dp, fitFraction)
+    val bottomGap = adaptiveDp(2.dp, 8.dp, fitFraction)
+
+    // Reserve the worst-case height for text/actions/progress/controls, then let
+    // artwork consume only the remaining safe height.
+    val titleArtistReserve = adaptiveDp(68.dp, 92.dp, fitFraction)
+    val actionsReserve = 56.dp
+    val progressReserve = 64.dp
+    val reservedHeight =
+        topGap +
+            artworkTextGap +
+            titleArtistReserve +
+            actionsGap +
+            actionsReserve +
+            actionsGap +
+            progressReserve +
+            controlsGap +
+            playButtonSize +
+            bottomGap
+    val artHeightBudget = (usableHeight - reservedHeight).coerceAtLeast(112.dp)
+    val artWidthBudget = (maxWidth - horizontalPadding * 2).coerceAtLeast(112.dp)
+    val artSize = minOf(artWidthBudget, artHeightBudget, 360.dp)
     var selectedTab by remember { mutableIntStateOf(0) }
     var menuOpen by remember { mutableStateOf(false) }
     val item = player?.currentMediaItem
@@ -144,7 +160,7 @@ fun NowPlayingScreen(
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 6.dp),
+            Modifier.fillMaxWidth().height(topBarHeight).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(back) {
@@ -210,7 +226,6 @@ fun NowPlayingScreen(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = horizontalPadding)
                     .padding(bottom = navigationBarInset),
                 horizontalAlignment = Alignment.CenterHorizontally
