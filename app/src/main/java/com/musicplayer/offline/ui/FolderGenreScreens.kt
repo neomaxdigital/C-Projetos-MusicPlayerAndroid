@@ -198,21 +198,34 @@ fun GenreDetailScreen(
     onPlayNext: (Song) -> Unit,
     onAddQueue: (Song) -> Unit,
     onAddPlaylist: (Song) -> Unit
-) = GroupDetail(
-    title = genre.name,
-    subtitle = songCount(genre.songs.size),
-    songs = genre.songs,
-    currentSongId = currentSongId,
-    favoriteIds = favoriteIds,
-    onBack = onBack,
-    onSong = onSong,
-    onFavorite = onFavorite,
-    onArtist = onArtist,
-    onAlbum = onAlbum,
-    onPlayNext = onPlayNext,
-    onAddQueue = onAddQueue,
-    onAddPlaylist = onAddPlaylist
-)
+) {
+    if (genre.songs.isEmpty()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            SimpleBackHeader(genre.name, onBack, "0 músicas")
+            EmptyLibraryPage(
+                genre.name,
+                "Nenhuma música deste gênero foi identificada na sua biblioteca.",
+                Icons.Default.Category
+            )
+        }
+    } else {
+        GroupDetail(
+            title = genre.name,
+            subtitle = songCount(genre.songs.size),
+            songs = genre.songs,
+            currentSongId = currentSongId,
+            favoriteIds = favoriteIds,
+            onBack = onBack,
+            onSong = onSong,
+            onFavorite = onFavorite,
+            onArtist = onArtist,
+            onAlbum = onAlbum,
+            onPlayNext = onPlayNext,
+            onAddQueue = onAddQueue,
+            onAddPlaylist = onAddPlaylist
+        )
+    }
+}
 
 private data class GroupItem(
     val key: String,
