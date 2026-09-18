@@ -103,10 +103,58 @@ fun List<Song>.asFolders(): List<FolderGroup> =
         }
         .sortedWith(compareBy<FolderGroup, String>(String.CASE_INSENSITIVE_ORDER) { it.name })
 
-fun List<Song>.asGenres(): List<GenreGroup> =
-    groupBy { it.genre.ifBlank { UNKNOWN_GENRE } }
-        .map { (genre, songs) -> GenreGroup(genre, songs.sortedByOption(SongSort.TITLE)) }
-        .sortedWith(compareBy<GenreGroup, String>(String.CASE_INSENSITIVE_ORDER) { it.name })
+private val POPULAR_BRAZIL_GENRES = listOf(
+    "Sertanejo",
+    "Gospel",
+    "Pagode",
+    "Samba",
+    "Forró",
+    "Piseiro",
+    "Funk",
+    "MPB",
+    "Pop",
+    "Rock",
+    "Rap / Hip-Hop",
+    "Eletrônica",
+    "Axé"
+)
+
+fun List<Song>.asGenres(): List<GenreGroup> {
+    val categorized = this
+        .mapNotNull { song ->
+            canonicalBrazilGenre(song.genre)?.let { genre -> genre to song }
+        }
+        .groupBy({ it.first }, { it.second })
+
+    return POPULAR_BRAZIL_GENRES.map { genre ->
+        GenreGroup(
+            name = genre,
+            songs = categorized[genre].orEmpty().sortedByOption(SongSort.TITLE)
+        )
+    }
+}
+
+private fun canonicalBrazilGenre(rawGenre: String): String? {
+    val genre = rawGenre.trim().lowercase()
+    if (genre.isBlank() || genre == UNKNOWN_GENRE.lowercase()) return null
+
+    return when {
+        "sertanejo" in genre || "country" in genre -> "Sertanejo"
+        "gospel" in genre || "christian" in genre || "religious" in genre || "worship" in genre -> "Gospel"
+        "pagode" in genre -> "Pagode"
+        "samba" in genre -> "Samba"
+        "forró" in genre || "forro" in genre -> "Forró"
+        "piseiro" in genre || "pisadinha" in genre -> "Piseiro"
+        "funk" in genre -> "Funk"
+        genre == "mpb" || "música popular brasileira" in genre || "musica popular brasileira" in genre -> "MPB"
+        "pop" in genre -> "Pop"
+        "rock" in genre -> "Rock"
+        "rap" in genre || "hip-hop" in genre || "hip hop" in genre || "trap" in genre -> "Rap / Hip-Hop"
+        "eletrônica" in genre || "eletronica" in genre || "electronic" in genre || "dance" in genre || "edm" in genre -> "Eletrônica"
+        "axé" in genre || "axe" in genre -> "Axé"
+        else -> null
+    }
+}
 
 private fun normalizedTrack(track: Int): Int = if (track > 0) track else Int.MAX_VALUE
 
