@@ -9,7 +9,7 @@
 
     <style name="Theme.MusicPlayer.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/juke_brand_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/juke_splash_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/juke_splash_empty</item>
         <item name="windowSplashScreenAnimationDuration">0</item>
         <item name="postSplashScreenTheme">@style/Theme.MusicPlayer</item>
     </style>
