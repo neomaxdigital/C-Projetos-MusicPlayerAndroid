@@ -29,8 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
@@ -100,6 +102,8 @@ fun NowPlayingScreen(
     favorite: Boolean,
     toggleFavorite: () -> Unit,
     openQueue: () -> Unit,
+    addToQueue: () -> Unit = {},
+    addToPlaylist: () -> Unit = {},
     openEqualizer: () -> Unit = {},
     openLyrics: () -> Unit = {},
     requestConversion: (Song, Boolean) -> Unit = { _, _ -> },
@@ -123,9 +127,9 @@ fun NowPlayingScreen(
     val titleLineHeight = adaptiveSp(22f, 32f, fitFraction)
     val artistSize = adaptiveSp(13f, 17f, fitFraction)
     val actionsGap = adaptiveDp(5.dp, 16.dp, fitFraction)
-    val controlsGap = adaptiveDp(4.dp, 12.dp, fitFraction)
+    val controlsGap = adaptiveDp(2.dp, 6.dp, fitFraction)
     val playButtonSize = adaptiveDp(62.dp, 82.dp, fitFraction)
-    val bottomGap = adaptiveDp(2.dp, 8.dp, fitFraction)
+    val bottomGap = adaptiveDp(10.dp, 16.dp, fitFraction)
     val actionLabelSizeSp = if (maxWidth < 380.dp) 9f else 11f
 
     // Reserve the worst-case height for text/actions/progress/controls, then let
@@ -267,7 +271,12 @@ fun NowPlayingScreen(
                     )
                     NowPlayingAction(Icons.Default.Tune, "Equalizador", onClick = openEqualizer, labelFontSizeSp = actionLabelSizeSp)
                     NowPlayingAction(Icons.Default.Share, "Compartilhar", enabled = song != null, onClick = share, labelFontSizeSp = actionLabelSizeSp)
-                    NowPlayingAction(Icons.AutoMirrored.Filled.QueueMusic, "Fila", onClick = openQueue, labelFontSizeSp = actionLabelSizeSp)
+                    NowPlayingAddAction(
+                        enabled = song != null || item != null,
+                        labelFontSizeSp = actionLabelSizeSp,
+                        onAddToPlaylist = addToPlaylist,
+                        onAddToQueue = addToQueue
+                    )
                 }
                 Spacer(Modifier.height(actionsGap))
                 PlaybackProgress(player, position, duration)
@@ -335,6 +344,64 @@ private fun TurntableArtwork(size: Dp) {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
+    }
+}
+
+@Composable
+private fun RowScope.NowPlayingAddAction(
+    enabled: Boolean,
+    labelFontSizeSp: Float,
+    onAddToPlaylist: () -> Unit,
+    onAddToQueue: () -> Unit
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box(Modifier.weight(1f)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled) { menuOpen = true }
+                .padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Add,
+                "Adicionar",
+                tint = if (enabled) PrimaryBlue else TextMuted.copy(alpha = .40f),
+                modifier = Modifier.size(30.dp)
+            )
+            Text(
+                "Adicionar",
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+                color = if (enabled) TextMuted else TextMuted.copy(alpha = .40f),
+                fontSize = labelFontSizeSp.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        DropdownMenu(
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Adicionar à playlist") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) },
+                onClick = {
+                    menuOpen = false
+                    onAddToPlaylist()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Adicionar à fila de reprodução") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) },
+                onClick = {
+                    menuOpen = false
+                    onAddToQueue()
+                }
+            )
+        }
     }
 }
 
