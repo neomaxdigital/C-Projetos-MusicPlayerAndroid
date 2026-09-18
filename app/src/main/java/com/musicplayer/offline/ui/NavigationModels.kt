@@ -1,7 +1,7 @@
 package com.musicplayer.offline.ui
 
 enum class Destination { HOME, FAVORITES, RECENT }
-enum class FeatureRoute { EQUALIZER, SLEEP_TIMER, LYRICS, SETTINGS }
+enum class FeatureRoute { EQUALIZER, SLEEP_TIMER, ALARM, LYRICS, SETTINGS }
 
 enum class LibraryTab(val title: String) {
     SONGS("Faixas"),
