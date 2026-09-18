@@ -70,6 +70,7 @@ import com.musicplayer.offline.music.asArtists
 import com.musicplayer.offline.music.asGenres
 import com.musicplayer.offline.music.sortedByOption
 import com.musicplayer.offline.playback.PlaybackService
+import com.musicplayer.offline.ui.AlarmScreen
 import com.musicplayer.offline.ui.AlbumDetailScreen
 import com.musicplayer.offline.ui.AppBackground
 import com.musicplayer.offline.ui.AppBottomBar
@@ -320,6 +321,7 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                 state.loadError != null && state.songs.isEmpty() -> LibraryErrorScreen(state.loadError) { rescanRevision++ }
                 feature == FeatureRoute.EQUALIZER -> EqualizerScreen { feature = null }
                 feature == FeatureRoute.SLEEP_TIMER -> SleepTimerScreen { feature = null }
+                feature == FeatureRoute.ALARM -> AlarmScreen(state.songs, state.playlists) { feature = null }
                 feature == FeatureRoute.LYRICS -> LyricsScreen(currentSong, position, state.settings.animationsEnabled) { feature = null }
                 feature == FeatureRoute.SETTINGS -> SettingsScreen(
                     state.settings, viewModel::updateSettings, { rescanRevision++ }, { feature = null }
@@ -599,6 +601,7 @@ private fun HomeShell(
                         onQueue = openQueue,
                         onEqualizer = { openFeature(FeatureRoute.EQUALIZER) },
                         onSleepTimer = { openFeature(FeatureRoute.SLEEP_TIMER) },
+                        onAlarm = { openFeature(FeatureRoute.ALARM) },
                         onSettings = { openFeature(FeatureRoute.SETTINGS) },
                         onAddFolder = onAddFolder,
                         onAddSong = onAddSong,
