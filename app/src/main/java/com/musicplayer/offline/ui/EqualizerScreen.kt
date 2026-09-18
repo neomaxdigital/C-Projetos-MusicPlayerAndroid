@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -56,7 +57,13 @@ private val DisplayBandDescriptions = listOf("Graves", "Baixos", "Médios", "Agu
 @Composable
 fun EqualizerScreen(back: () -> Unit) {
     val state by EqualizerManager.state.collectAsState()
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 28.dp)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .padding(bottom = 20.dp)
+    ) {
         EqualizerHeader(state.enabled, state.available, EqualizerManager::setEnabled, back)
         PresetsSection(state)
         ManualAdjustmentSection(state)
