@@ -1,6 +1,9 @@
 package com.musicplayer.offline.ui
 
+import android.Manifest
 import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,6 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -53,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.musicplayer.offline.alarm.AlarmDayLabels
 import com.musicplayer.offline.alarm.AlarmScheduler
 import com.musicplayer.offline.alarm.AlarmSourceType
@@ -74,6 +80,18 @@ fun AlarmScreen(
     var alarms by remember { mutableStateOf(repository.alarms()) }
     var editing by remember { mutableStateOf<MusicAlarm?>(null) }
     val exactAllowed = AlarmScheduler.canScheduleExact(context)
+    var notificationsAllowed by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { notificationsAllowed = it }
 
     Column(Modifier.fillMaxSize()) {
         FeatureTopBar("Despertador", back)
@@ -98,6 +116,30 @@ fun AlarmScreen(
                             AlarmScheduler.exactAlarmSettingsIntent(context)?.let(context::startActivity)
                         }
                     ) { Text("Permitir alarmes exatos") }
+                }
+            }
+        }
+
+        if (!notificationsAllowed && Build.VERSION.SDK_INT >= 33) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Notificações do despertador", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        "Permita notificações para usar os botões Soneca e Parar quando o alarme tocar.",
+                        color = TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(
+                        onClick = {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    ) { Text("Permitir notificações") }
                 }
             }
         }
