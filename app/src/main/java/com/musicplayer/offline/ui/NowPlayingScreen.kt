@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -130,6 +131,7 @@ fun NowPlayingScreen(
     val controlsGap = adaptiveDp(2.dp, 6.dp, fitFraction)
     val playButtonSize = adaptiveDp(62.dp, 82.dp, fitFraction)
     val bottomGap = adaptiveDp(10.dp, 16.dp, fitFraction)
+    val bottomControlsLift = adaptiveDp(12.dp, 16.dp, fitFraction)
     val actionLabelSizeSp = if (maxWidth < 380.dp) 9f else 11f
 
     // Reserve the worst-case height for text/actions/progress/controls, then let
@@ -302,7 +304,14 @@ fun NowPlayingScreen(
                 Spacer(Modifier.height(actionsGap))
                 PlaybackProgress(player, position, duration)
                 Spacer(Modifier.height(controlsGap))
-                PlaybackControls(player, playing, shuffleEnabled, repeatMode, playButtonSize)
+                PlaybackControls(
+                    player = player,
+                    playing = playing,
+                    shuffleEnabled = shuffleEnabled,
+                    repeatMode = repeatMode,
+                    playSize = playButtonSize,
+                    modifier = Modifier.offset(y = -bottomControlsLift)
+                )
                 Spacer(Modifier.height(bottomGap))
             }
         } else {
@@ -510,8 +519,15 @@ private fun PlaybackProgress(player: Player?, position: Long, duration: Long) {
 }
 
 @Composable
-private fun PlaybackControls(player: Player?, playing: Boolean, shuffleEnabled: Boolean, repeatMode: Int, playSize: Dp) {
-    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+private fun PlaybackControls(
+    player: Player?,
+    playing: Boolean,
+    shuffleEnabled: Boolean,
+    repeatMode: Int,
+    playSize: Dp,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         IconButton({ player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }) {
             Icon(Icons.Default.Shuffle, "Aleatório", tint = if (shuffleEnabled) PrimaryBlue else TextMuted)
         }
