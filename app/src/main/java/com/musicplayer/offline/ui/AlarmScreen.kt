@@ -136,6 +136,26 @@ fun AlarmScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         fullScreenAllowed = canUseFullScreenAlarm()
+
+        val pendingId = pendingEnableAlarmId
+        pendingEnableAlarmId = null
+
+        if (pendingId != null && fullScreenAllowed) {
+            repository.find(pendingId)?.let { alarm ->
+                if (alarm.tracks.isNotEmpty() && AlarmScheduler.canScheduleExact(context)) {
+                    val enabledAlarm = alarm.copy(enabled = true)
+                    alarms = repository.upsert(enabledAlarm)
+                    AlarmScheduler.schedule(context, enabledAlarm)
+                    Toast.makeText(context, "Despertador ativado", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else if (pendingId != null && !fullScreenAllowed) {
+            Toast.makeText(
+                context,
+                "Permita tela cheia para o despertador aparecer quando tocar.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     Column(Modifier.fillMaxSize().navigationBarsPadding()) {
@@ -287,6 +307,25 @@ fun AlarmScreen(
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
+                                }
+
+                                Build.VERSION.SDK_INT >= 34 && !canUseFullScreenAlarm() -> {
+                                    pendingEnableAlarmId = alarm.id
+                                    fullScreenSettingsLauncher.launch(
+                                        android.content.Intent(
+                                            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                                            Uri.parse("package:" + context.packageName)
+                                        )
+                                    )
+                                }
+
+                                Build.VERSION.SDK_INT >= 33 && !notificationsAllowed -> {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    Toast.makeText(
+                                        context,
+                                        "Permita notificações e toque novamente para ativar o despertador.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
 
                                 else -> {
