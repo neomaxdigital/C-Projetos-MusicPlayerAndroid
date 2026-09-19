@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
@@ -118,7 +119,8 @@ fun SongRow(
     onAlbum: () -> Unit,
     onPlayNext: () -> Unit = {},
     onAddToQueue: () -> Unit = {},
-    onAddToPlaylist: () -> Unit = {}
+    onAddToPlaylist: () -> Unit = {},
+    onRemoveFromLibrary: (() -> Unit)? = null
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val requestConversion = LocalConversionRequest.current
@@ -176,6 +178,16 @@ fun SongRow(
                         text = { Text("Converter para MP3") },
                         leadingIcon = { Icon(Icons.Default.Sync, null) },
                         onClick = { menuOpen = false; requestConversion(song, false) }
+                    )
+                }
+                if (onRemoveFromLibrary != null) {
+                    DropdownMenuItem(
+                        text = { Text("Remover") },
+                        leadingIcon = { Icon(Icons.Default.Delete, null) },
+                        onClick = {
+                            menuOpen = false
+                            onRemoveFromLibrary()
+                        }
                     )
                 }
             }
