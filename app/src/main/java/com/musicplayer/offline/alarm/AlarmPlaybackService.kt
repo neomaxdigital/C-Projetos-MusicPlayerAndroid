@@ -24,7 +24,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.musicplayer.offline.MainActivity
 
 class AlarmPlaybackService : Service() {
     private var player: ExoPlayer? = null
@@ -204,12 +203,17 @@ class AlarmPlaybackService : Service() {
     }
 
     private fun buildNotification(alarm: MusicAlarm): android.app.Notification {
-        val contentIntent = PendingIntent.getActivity(
+        val ringingIntent = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, MainActivity::class.java).addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            ),
+            alarm.id.hashCode(),
+            Intent(this, AlarmRingingActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                )
+                putExtra(EXTRA_ALARM_ID, alarm.id)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -234,7 +238,9 @@ class AlarmPlaybackService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setAutoCancel(false)
-            .setContentIntent(contentIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(ringingIntent)
+            .setFullScreenIntent(ringingIntent, true)
             .addAction(0, "Soneca " + alarm.snoozeMinutes + " min", snoozeIntent)
             .addAction(0, "Parar", stopIntent)
             .build()
