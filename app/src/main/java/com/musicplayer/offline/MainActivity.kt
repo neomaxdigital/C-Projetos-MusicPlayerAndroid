@@ -407,17 +407,23 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                   val isPlaylistConfirmation =
                       message == "Adicionado à playlist" ||
                           message == "Playlist criada e música adicionada"
+                  val isMusicAddedConfirmation = message == "Música adicionada à biblioteca"
+                  val autoDismissDelay = when {
+                      isMusicAddedConfirmation -> 3_000L
+                      isPlaylistConfirmation -> 1_800L
+                      else -> null
+                  }
 
-                  if (isPlaylistConfirmation) {
+                  autoDismissDelay?.let { dismissDelay ->
                       LaunchedEffect(message) {
-                          delay(1_800)
+                          delay(dismissDelay)
                           if (playbackMessage == message) playbackMessage = null
                       }
                   }
 
                   Snackbar(
                       modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 110.dp),
-                      action = if (isPlaylistConfirmation) null else {
+                      action = if (autoDismissDelay != null) null else {
                           { TextButton({ playbackMessage = null }) { Text("Fechar") } }
                       }
                   ) { Text(message) }
