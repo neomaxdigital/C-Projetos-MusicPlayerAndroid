@@ -1,5 +1,6 @@
 package com.musicplayer.offline.alarm
 
+import android.app.ActivityOptions
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -203,18 +204,29 @@ class AlarmPlaybackService : Service() {
     }
 
     private fun buildNotification(alarm: MusicAlarm): android.app.Notification {
+        val ringingActivityIntent = Intent(this, AlarmRingingActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+            )
+            putExtra(EXTRA_ALARM_ID, alarm.id)
+        }
+        val backgroundLaunchOptions = if (Build.VERSION.SDK_INT >= 34) {
+            ActivityOptions.makeBasic().apply {
+                setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                )
+            }.toBundle()
+        } else {
+            null
+        }
         val ringingIntent = PendingIntent.getActivity(
             this,
             alarm.id.hashCode(),
-            Intent(this, AlarmRingingActivity::class.java).apply {
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-                )
-                putExtra(EXTRA_ALARM_ID, alarm.id)
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            ringingActivityIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            backgroundLaunchOptions
         )
 
         val snoozeIntent = PendingIntent.getService(
