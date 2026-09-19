@@ -57,6 +57,7 @@ internal fun MainMusicPreviewContent() = PreviewTheme {
             onPlayNext = {},
             onAddToQueue = {},
             onAddToPlaylist = {},
+            onRemoveFromLibrary = {},
             onOpenFolder = {},
             onGenres = {},
             onQueue = {},
