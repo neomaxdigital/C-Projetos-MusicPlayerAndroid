@@ -92,6 +92,7 @@ fun LibraryRootScreen(
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
     onAddToPlaylist: (Song) -> Unit,
+    onRemoveFromLibrary: (Song) -> Unit,
     onOpenFolder: (String) -> Unit,
     onGenres: () -> Unit,
     onQueue: () -> Unit,
@@ -139,7 +140,7 @@ fun LibraryRootScreen(
         when (tab) {
             LibraryTab.SONGS -> SongsList(
                 songs, sort, shuffleEnabled, currentSongId, favoriteIds, onSort, onShuffle, onSong, onToggleFavorite, onArtist, onAlbum,
-                onPlayNext, onAddToQueue, onAddToPlaylist
+                onPlayNext, onAddToQueue, onAddToPlaylist, onRemoveFromLibrary
             )
             LibraryTab.ARTISTS -> ArtistsList(songs.asArtists(), onArtist)
             LibraryTab.ALBUMS -> AlbumsGrid(songs.asAlbums()) { onAlbum(it.songs.first()) }
@@ -173,7 +174,8 @@ fun ArtistDetailScreen(
     onAlbum: (Song) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
-    onAddToPlaylist: (Song) -> Unit
+    onAddToPlaylist: (Song) -> Unit,
+    onRemoveFromLibrary: (Song) -> Unit
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         DetailTopBar("Artista", onBack)
@@ -363,7 +365,7 @@ private fun SongsList(
             SongRow(
                 song, currentSongId == song.id, song.id in favoriteIds,
                 { onSong(song, songs) }, { onToggleFavorite(song) }, { onArtist(song.artist) }, { onAlbum(song) },
-                { onPlayNext(song) }, { onAddToQueue(song) }, { onAddToPlaylist(song) }
+                { onPlayNext(song) }, { onAddToQueue(song) }, { onAddToPlaylist(song) }, { onRemoveFromLibrary(song) }
             )
         }
     }
