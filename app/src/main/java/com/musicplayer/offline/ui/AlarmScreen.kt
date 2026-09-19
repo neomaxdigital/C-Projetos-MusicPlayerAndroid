@@ -1,9 +1,12 @@
 package com.musicplayer.offline.ui
 
 import android.Manifest
+import android.app.NotificationManager
 import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -124,6 +127,17 @@ fun AlarmScreen(
         ActivityResultContracts.RequestPermission()
     ) { notificationsAllowed = it }
 
+    fun canUseFullScreenAlarm(): Boolean =
+        Build.VERSION.SDK_INT < 34 ||
+            context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+
+    var fullScreenAllowed by remember { mutableStateOf(canUseFullScreenAlarm()) }
+    val fullScreenSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        fullScreenAllowed = canUseFullScreenAlarm()
+    }
+
     Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         FeatureTopBar("Despertador", back)
 
@@ -171,6 +185,35 @@ fun AlarmScreen(
                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     ) { Text("Permitir notificações") }
+                }
+            }
+        }
+
+        if (!fullScreenAllowed && Build.VERSION.SDK_INT >= 34) {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Permissão de tela cheia", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        "Permita que o Juke abra a tela do despertador com Soneca e Parar quando o alarme tocar.",
+                        color = TextMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(
+                        onClick = {
+                            fullScreenSettingsLauncher.launch(
+                                android.content.Intent(
+                                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                                    Uri.parse("package:" + context.packageName)
+                                )
+                            )
+                        }
+                    ) { Text("Permitir tela cheia") }
                 }
             }
         }
