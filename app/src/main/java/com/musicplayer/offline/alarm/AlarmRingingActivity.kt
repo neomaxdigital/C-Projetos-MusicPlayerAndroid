@@ -126,7 +126,7 @@ class AlarmRingingActivity : Activity() {
             )
         )
 
-        val spacer = android.view.Space(this)
+        val spacer = android.widget.Space(this)
         root.addView(
             spacer,
             LinearLayout.LayoutParams(
