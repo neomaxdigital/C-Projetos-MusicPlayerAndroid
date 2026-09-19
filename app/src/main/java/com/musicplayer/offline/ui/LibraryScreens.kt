@@ -174,8 +174,7 @@ fun ArtistDetailScreen(
     onAlbum: (Song) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
-    onAddToPlaylist: (Song) -> Unit,
-    onRemoveFromLibrary: (Song) -> Unit
+    onAddToPlaylist: (Song) -> Unit
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         DetailTopBar("Artista", onBack)
@@ -349,7 +348,8 @@ private fun SongsList(
     onAlbum: (Song) -> Unit,
     onPlayNext: (Song) -> Unit,
     onAddToQueue: (Song) -> Unit,
-    onAddToPlaylist: (Song) -> Unit
+    onAddToPlaylist: (Song) -> Unit,
+    onRemoveFromLibrary: (Song) -> Unit
 ) {
     if (songs.isEmpty()) {
         EmptyLibraryPage(
