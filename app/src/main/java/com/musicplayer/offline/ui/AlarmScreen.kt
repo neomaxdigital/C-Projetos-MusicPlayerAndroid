@@ -100,11 +100,33 @@ fun AlarmScreen(
         pendingEnableAlarmId = null
 
         if (pendingId != null && exactAllowed) {
-            repository.find(pendingId)?.let { alarm ->
-                val enabledAlarm = alarm.copy(enabled = true)
-                alarms = repository.upsert(enabledAlarm)
-                AlarmScheduler.schedule(context, enabledAlarm)
-                Toast.makeText(context, "Despertador ativado", Toast.LENGTH_SHORT).show()
+            val fullScreenReady =
+                Build.VERSION.SDK_INT < 34 ||
+                    context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+            val notificationsReady =
+                Build.VERSION.SDK_INT < 33 ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+
+            if (fullScreenReady && notificationsReady) {
+                repository.find(pendingId)?.let { alarm ->
+                    val enabledAlarm = alarm.copy(enabled = true)
+                    alarms = repository.upsert(enabledAlarm)
+                    AlarmScheduler.schedule(context, enabledAlarm)
+                    Toast.makeText(context, "Despertador ativado", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(
+                    context,
+                    if (!fullScreenReady) {
+                        "Agora permita tela cheia para o despertador aparecer quando tocar."
+                    } else {
+                        "Agora permita notificações para concluir a ativação."
+                    },
+                    Toast.LENGTH_LONG
+                ).show()
             }
         } else if (pendingId != null && !exactAllowed) {
             Toast.makeText(
@@ -352,9 +374,18 @@ fun AlarmScreen(
             playlists = playlists,
             onDismiss = { editing = null },
             onSave = { edited ->
+                val fullScreenReady =
+                    Build.VERSION.SDK_INT < 34 || canUseFullScreenAlarm()
+                val notificationsReady =
+                    Build.VERSION.SDK_INT < 33 || notificationsAllowed
                 val finalAlarm = if (
                     edited.enabled &&
-                    (!AlarmScheduler.canScheduleExact(context) || edited.tracks.isEmpty())
+                    (
+                        !AlarmScheduler.canScheduleExact(context) ||
+                            edited.tracks.isEmpty() ||
+                            !fullScreenReady ||
+                            !notificationsReady
+                    )
                 ) edited.copy(enabled = false) else edited
 
                 alarms = repository.upsert(finalAlarm)
@@ -362,12 +393,17 @@ fun AlarmScreen(
                 else AlarmScheduler.cancel(context, finalAlarm.id)
 
                 if (edited.enabled && !finalAlarm.enabled) {
-                    Toast.makeText(
-                        context,
-                        if (edited.tracks.isEmpty()) "Escolha uma música ou playlist."
-                        else "Alarme salvo. Permita alarmes exatos para ativar.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    val message = when {
+                        edited.tracks.isEmpty() -> "Escolha uma música ou playlist."
+                        !AlarmScheduler.canScheduleExact(context) ->
+                            "Alarme salvo. Permita alarmes exatos para ativar."
+                        !fullScreenReady ->
+                            "Alarme salvo. Permita tela cheia para ativar e mostrar o despertador."
+                        !notificationsReady ->
+                            "Alarme salvo. Permita notificações para ativar o despertador."
+                        else -> "Alarme salvo, mas não foi possível ativá-lo."
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
                 editing = null
             }
