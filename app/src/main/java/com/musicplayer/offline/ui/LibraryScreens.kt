@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Favorite
@@ -98,7 +97,6 @@ fun LibraryRootScreen(
     onQueue: () -> Unit,
     onEqualizer: () -> Unit,
     onSleepTimer: () -> Unit,
-    onAlarm: () -> Unit,
     onSettings: () -> Unit,
     onAddFolder: () -> Unit,
     onAddSong: () -> Unit,
@@ -107,7 +105,7 @@ fun LibraryRootScreen(
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         LibraryTopBar(
-            tab.title, onSearch, onGenres, onQueue, onEqualizer, onSleepTimer, onAlarm, onSettings,
+            tab.title, onSearch, onGenres, onQueue, onEqualizer, onSleepTimer, onSettings,
             onAddFolder, onAddSong, onRefreshLibrary, showMusicActions = tab == LibraryTab.SONGS
         )
         TabRow(
@@ -457,7 +455,6 @@ private fun LibraryTopBar(
     onQueue: (() -> Unit)? = null,
     onEqualizer: (() -> Unit)? = null,
     onSleepTimer: (() -> Unit)? = null,
-    onAlarm: (() -> Unit)? = null,
     onSettings: (() -> Unit)? = null,
     onAddFolder: (() -> Unit)? = null,
     onAddSong: (() -> Unit)? = null,
@@ -506,7 +503,6 @@ private fun LibraryTopBar(
                 DropdownMenuItem(text = { Text("Fila de reprodução") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, null) }, onClick = { moreOpen = false; onQueue() })
                 if (onEqualizer != null) DropdownMenuItem(text = { Text("Equalizador") }, leadingIcon = { Icon(Icons.Default.GraphicEq, null) }, onClick = { moreOpen = false; onEqualizer() })
                 if (onSleepTimer != null) DropdownMenuItem(text = { Text("Timer para dormir") }, leadingIcon = { Icon(Icons.Default.Bedtime, null) }, onClick = { moreOpen = false; onSleepTimer() })
-                if (onAlarm != null) DropdownMenuItem(text = { Text("Despertador") }, leadingIcon = { Icon(Icons.Default.Alarm, null) }, onClick = { moreOpen = false; onAlarm() })
                 if (onSettings != null) DropdownMenuItem(text = { Text("Configurações") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { moreOpen = false; onSettings() })
             }
         }
