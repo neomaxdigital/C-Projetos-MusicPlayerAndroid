@@ -86,6 +86,20 @@ class MusicPlayerViewModel(
 
     fun removeUnavailableSong(songId: Long) { setSongs(state.songs.filterNot { it.id == songId }) }
 
+    fun removeSongFromLibrary(songId: Long) {
+        val remainingSongs = state.songs.filterNot { it.id == songId }
+        val validIds = remainingSongs.mapTo(hashSetOf()) { it.id }
+        val (favorites, recents, playCounts) = userLibrary.retainOnly(validIds)
+        state = state.copy(
+            songs = remainingSongs,
+            favoriteIds = favorites,
+            recentIds = recents,
+            playCounts = playCounts,
+            playlists = playlistRepository.retainOnly(validIds)
+        )
+    }
+
+
     fun setSort(sort: SongSort) {
         state = state.copy(sort = sort)
     }
