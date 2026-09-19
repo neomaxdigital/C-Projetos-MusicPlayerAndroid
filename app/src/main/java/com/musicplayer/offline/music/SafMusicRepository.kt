@@ -27,17 +27,50 @@ class SafMusicRepository(context: Context) {
      */
     fun addSong(uri: Uri): SafSongImportResult = runCatching {
         val song = songFromUri(uri, INDIVIDUAL_SONGS_PATH) ?: return SafSongImportResult.Unsupported
+        unhideSong(uri)
         SafSongImportResult.Imported(song, rememberUri(SONG_URIS_KEY, uri))
     }.getOrDefault(SafSongImportResult.Failed)
 
-    fun loadSongs(): List<Song> = LibrarySongMerge.merge(emptyList(), buildList {
-        folderUris().forEach { treeUri ->
-            runCatching { loadTree(treeUri) }.getOrDefault(emptyList()).forEach(::add)
+    /**
+     * Removes a song from JUKE's library only. The original audio file is never deleted.
+     * Songs discovered through a selected folder are persisted in an exclusion set so they
+     * remain hidden after refresh/restart. Individually added URIs are also forgotten.
+     */
+    fun removeSongFromLibrary(uri: Uri): Boolean {
+        val value = uri.toString()
+        val individualUris = preferences.getStringSet(SONG_URIS_KEY, emptySet()).orEmpty().toMutableSet()
+        val removedIndividual = individualUris.remove(value)
+        val excluded = preferences.getStringSet(EXCLUDED_SONG_URIS_KEY, emptySet()).orEmpty().toMutableSet()
+        val newlyExcluded = excluded.add(value)
+        preferences.edit()
+            .putStringSet(SONG_URIS_KEY, individualUris)
+            .putStringSet(EXCLUDED_SONG_URIS_KEY, excluded)
+            .apply()
+        return removedIndividual || newlyExcluded
+    }
+
+    fun loadSongs(): List<Song> {
+        val excluded = preferences.getStringSet(EXCLUDED_SONG_URIS_KEY, emptySet()).orEmpty()
+        return LibrarySongMerge.merge(emptyList(), buildList {
+            folderUris().forEach { treeUri ->
+                runCatching { loadTree(treeUri) }.getOrDefault(emptyList())
+                    .filterNot { it.uri.toString() in excluded }
+                    .forEach(::add)
+            }
+            songUris().forEach { uri ->
+                if (uri.toString() !in excluded) {
+                    runCatching { songFromUri(uri, INDIVIDUAL_SONGS_PATH) }.getOrNull()?.let(::add)
+                }
+            }
+        })
+    }
+
+    private fun unhideSong(uri: Uri) {
+        val excluded = preferences.getStringSet(EXCLUDED_SONG_URIS_KEY, emptySet()).orEmpty().toMutableSet()
+        if (excluded.remove(uri.toString())) {
+            preferences.edit().putStringSet(EXCLUDED_SONG_URIS_KEY, excluded).apply()
         }
-        songUris().forEach { uri ->
-            runCatching { songFromUri(uri, INDIVIDUAL_SONGS_PATH) }.getOrNull()?.let(::add)
-        }
-    })
+    }
 
     private fun rememberUri(key: String, uri: Uri): Boolean {
         takeReadPermissionIfAvailable(uri)
@@ -170,6 +203,7 @@ class SafMusicRepository(context: Context) {
         const val PREFERENCES_NAME = "saf_music_library"
         const val FOLDER_URIS_KEY = "folder_uris"
         const val SONG_URIS_KEY = "song_uris"
+        const val EXCLUDED_SONG_URIS_KEY = "excluded_song_uris"
         const val INDIVIDUAL_SONGS_PATH = "Músicas adicionadas"
         val DOCUMENT_PROJECTION = arrayOf(
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
