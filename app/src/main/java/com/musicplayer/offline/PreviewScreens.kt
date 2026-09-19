@@ -63,7 +63,6 @@ internal fun MainMusicPreviewContent() = PreviewTheme {
             onQueue = {},
             onEqualizer = {},
             onSleepTimer = {},
-            onAlarm = {},
             onSettings = {},
             onAddFolder = {},
             onAddSong = {},
