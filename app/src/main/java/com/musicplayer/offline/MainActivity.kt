@@ -382,6 +382,18 @@ private fun MusicPlayerApp(viewModel: MusicPlayerViewModel) {
                         playSong(player, queue, song)
                     },
                     onConvertSong = { song, shareAfter -> conversionRequest = ConversionRequest(song, shareAfter) },
+                    onRemoveFromLibrary = { song ->
+                        safMusicRepository.removeSongFromLibrary(song.uri)
+                        player?.let { activePlayer ->
+                            for (index in activePlayer.mediaItemCount - 1 downTo 0) {
+                                if (activePlayer.getMediaItemAt(index).mediaId == song.id.toString()) {
+                                    activePlayer.removeMediaItem(index)
+                                }
+                            }
+                        }
+                        viewModel.removeSongFromLibrary(song.id)
+                        playbackMessage = "Removida do aplicativo"
+                    },
                     onAddFolder = { folderLauncher.launch(null) },
                     onAddSong = { songLauncher.launch(arrayOf("audio/*")) },
                     onRefreshLibrary = {
@@ -476,6 +488,7 @@ private fun HomeShell(
     onMovePlaylistSong: (String, Int, Int) -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
     onConvertSong: (Song, Boolean) -> Unit,
+    onRemoveFromLibrary: (Song) -> Unit,
     onAddFolder: () -> Unit,
     onAddSong: () -> Unit,
     onRefreshLibrary: () -> Unit,
@@ -596,6 +609,7 @@ private fun HomeShell(
                         onPlayNext = ::playSongNext,
                         onAddToQueue = ::appendSong,
                         onAddToPlaylist = { playlistSong = it },
+                        onRemoveFromLibrary = onRemoveFromLibrary,
                         onOpenFolder = { openLibraryRoute(LibraryRoute.Folder(it)) },
                         onGenres = { openLibraryRoute(LibraryRoute.Genres) },
                         onQueue = openQueue,
