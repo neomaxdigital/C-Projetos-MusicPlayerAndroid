@@ -1,35 +1,32 @@
 package com.musicplayer.offline.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.musicplayer.offline.data.AccentColor
 import com.musicplayer.offline.data.AppSettings
-import com.musicplayer.offline.data.ArtworkSize
 import com.musicplayer.offline.data.ThemeMode
+import com.musicplayer.offline.data.ArtworkSize
 
-// Official default JUKE redesign palette: neutral dark only.
-// Existing AccentColor values are retained for settings/backward compatibility,
-// but the default approved visual layer does not use blue/cyan.
-val JukePrimary = Color(0xFFF2F2F2)
-val JukeElectricBlue = Color(0xFFD8D8D8)
-val JukeBackground = Color(0xFF0B0F12)
-val JukeSurface = Color(0xFF14191D)
-val JukeSurfaceVariant = Color(0xFF20262B)
-val JukeTextPrimary = Color(0xFFF5F5F5)
-val JukeTextSecondary = Color(0xFFAEB4BA)
-val JukeOnPrimary = Color(0xFF111417)
-val JukePrimaryContainer = Color(0xFF30363B)
-val JukeInactiveTrack = Color(0xFF3D4348)
-val JukeInactiveThumb = Color(0xFFF2F2F2)
-val JukeInactiveBorder = Color(0xFF666D73)
+val JukePrimary = Color(0xFF00C2FB)
+val JukeElectricBlue = Color(0xFF3A86FF)
+val JukeBackground = Color(0xFF00141C)
+val JukeSurface = Color(0xFF001C27)
+val JukeSurfaceVariant = Color(0xFF142738)
+val JukeTextPrimary = Color(0xFFF4F7FA)
+val JukeTextSecondary = Color(0xFFA8BACB)
+val JukeOnPrimary = Color(0xFF00141C)
+val JukePrimaryContainer = Color(0xFF003B50)
+val JukeInactiveTrack = Color(0xFF263641)
+val JukeInactiveThumb = Color(0xFFDCE5EC)
+val JukeInactiveBorder = Color(0xFF52616D)
 
 val LocalListArtworkSize = staticCompositionLocalOf { 54.dp }
 
@@ -47,11 +44,7 @@ internal fun AccentColor.themeColor(): Color = when (this) {
 @Composable
 fun MusicPlayerTheme(settings: AppSettings = AppSettings(), content: @Composable () -> Unit) {
     val systemDark = isSystemInDarkTheme()
-    val dark = when (settings.themeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> systemDark
-    }
+    val dark = when (settings.themeMode) { ThemeMode.DARK -> true; ThemeMode.LIGHT -> false; ThemeMode.SYSTEM -> systemDark }
     val accent = settings.accentColor.themeColor()
     val colors = if (dark) darkColorScheme(
         primary = accent,
@@ -60,8 +53,8 @@ fun MusicPlayerTheme(settings: AppSettings = AppSettings(), content: @Composable
         onPrimaryContainer = JukeTextPrimary,
         secondary = accent,
         onSecondary = JukeOnPrimary,
-        secondaryContainer = JukeSurfaceVariant,
-        onSecondaryContainer = JukeTextPrimary,
+        secondaryContainer = accent,
+        onSecondaryContainer = JukeOnPrimary,
         tertiary = accent,
         onTertiary = JukeOnPrimary,
         tertiaryContainer = JukePrimaryContainer,
@@ -72,38 +65,34 @@ fun MusicPlayerTheme(settings: AppSettings = AppSettings(), content: @Composable
         onSurface = JukeTextPrimary,
         surfaceVariant = JukeSurfaceVariant,
         onSurfaceVariant = JukeTextSecondary,
-        surfaceTint = Color.Transparent,
-        outline = Color(0xFF62686D),
-        outlineVariant = Color(0xFF363C41)
+        surfaceTint = accent,
+        outline = Color(0xFF6F8291),
+        outlineVariant = Color(0xFF344A5B)
     ) else lightColorScheme(
-        primary = Color(0xFF30363B),
+        primary = accent,
         onPrimary = Color.White,
-        primaryContainer = Color(0xFFE3E5E7),
-        onPrimaryContainer = Color(0xFF151719),
-        secondary = Color(0xFF50565B),
+        primaryContainer = Color(0xFFD4ECFF),
+        onPrimaryContainer = Color(0xFF001D35),
+        secondary = accent,
         onSecondary = Color.White,
-        secondaryContainer = Color(0xFFE5E7E9),
-        onSecondaryContainer = Color(0xFF1A1C1E),
-        tertiary = Color(0xFF6A7075),
+        secondaryContainer = accent,
+        onSecondaryContainer = Color(0xFF001F27),
+        tertiary = accent,
         onTertiary = Color.White,
-        tertiaryContainer = Color(0xFFE6E8EA),
-        onTertiaryContainer = Color(0xFF1A1C1E),
-        background = Color(0xFFF4F5F6),
-        onBackground = Color(0xFF17191B),
+        tertiaryContainer = Color(0xFFD0F0FF),
+        onTertiaryContainer = Color(0xFF001E2B),
+        background = Color(0xFFF4F8FC),
+        onBackground = Color(0xFF10202C),
         surface = Color.White,
-        onSurface = Color(0xFF17191B),
-        surfaceVariant = Color(0xFFE4E6E8),
-        onSurfaceVariant = Color(0xFF5D6368),
-        surfaceTint = Color.Transparent,
-        outline = Color(0xFF747A80),
-        outlineVariant = Color(0xFFC6CACD)
+        onSurface = Color(0xFF10202C),
+        surfaceVariant = Color(0xFFE2EAF1),
+        onSurfaceVariant = Color(0xFF526675),
+        surfaceTint = accent,
+        outline = Color(0xFF6F7F8B),
+        outlineVariant = Color(0xFFBECAD3)
     )
     MaterialTheme(colorScheme = colors) {
-        val artwork = when (settings.artworkSize) {
-            ArtworkSize.SMALL -> 44.dp
-            ArtworkSize.MEDIUM -> 54.dp
-            ArtworkSize.LARGE -> 68.dp
-        }
+        val artwork = when (settings.artworkSize) { ArtworkSize.SMALL -> 44.dp; ArtworkSize.MEDIUM -> 54.dp; ArtworkSize.LARGE -> 68.dp }
         CompositionLocalProvider(LocalListArtworkSize provides artwork, content = content)
     }
 }
